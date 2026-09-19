@@ -10,7 +10,7 @@ A small, clean-architecture ASP.NET Core solution for three related jobs:
    knowledge from any client.
 3. **MCP server** — an AI assistant such as Claude Desktop can call the same
    ingest and search operations directly as [Model Context Protocol](https://modelcontextprotocol.io)
-   tools, over stdio, with no HTTP layer involved.
+   tools, over stdio or the remote Streamable HTTP transport.
 
 ## Purpose
 
@@ -59,7 +59,7 @@ A small, clean-architecture ASP.NET Core solution for three related jobs:
   to HTTP status codes uniformly.
 - **Swagger / OpenAPI** UI for exploring and trying every HTTP endpoint.
 - **MCP tools for the same vector search use cases**: `ingest_file`,
-  `ingest_directory`, and `search` are exposed over stdio via
+  `ingest_directory`, and `search` are exposed over stdio or Streamable HTTP via
   `FileRepo.Mcp`, so an MCP-compatible AI client can ingest and search the
   shared knowledge base as naturally as a human calling the REST API.
 
@@ -82,7 +82,7 @@ flowchart TB
         VC[VectorDocumentsController]
     end
 
-    subgraph Mcp["FileRepo.Mcp (MCP server, stdio transport)"]
+    subgraph Mcp["FileRepo.Mcp (MCP server, stdio or HTTP transport)"]
         VST[VectorSearchTools\ningest_file / ingest_directory / search]
     end
 
@@ -301,8 +301,8 @@ Response:
 ## MCP server
 
 `FileRepo.Mcp` exposes the vector search use cases as [Model Context
-Protocol](https://modelcontextprotocol.io) tools over the **stdio**
-transport, built with the official
+Protocol](https://modelcontextprotocol.io) tools over **stdio** or the
+Streamable **HTTP** transport, built with the official
 [MCP C# SDK](https://www.nuget.org/packages/ModelContextProtocol) following
 the pattern in
 [Build a Model Context Protocol (MCP) server in C#](https://devblogs.microsoft.com/dotnet/build-a-model-context-protocol-mcp-server-in-csharp/).
@@ -333,8 +333,8 @@ status codes, just without the HTTP layer.
 
 ### Run it standalone (for testing)
 
-The server communicates over stdio, so it's normally launched by an MCP
-client rather than run interactively. To confirm it starts correctly:
+The default transport is stdio, so it's normally launched by an MCP client
+rather than run interactively. To confirm it starts correctly:
 
 ```bash
 dotnet build src/FileRepo.Mcp/FileRepo.Mcp.csproj
@@ -353,6 +353,35 @@ Web API and the MCP server read and write the **same** files, index, and
 catalog. Override any of these with environment variables (for example
 `VectorSearch__AllowedSourceRoot`) if you want the MCP server to point
 somewhere else.
+
+### Run as a remote HTTP MCP server
+
+Set `Mcp:Transport` to `http` (or use the equivalent
+`Mcp__Transport=http` environment variable) to expose the same tools through
+the SDK's Streamable HTTP endpoint. The default endpoint is `/mcp`; override it
+with `Mcp:HttpPath` or `Mcp__HttpPath`. Configure the listen address with the
+normal ASP.NET Core `ASPNETCORE_URLS` setting:
+
+```bash
+Mcp__Transport=http ASPNETCORE_URLS=http://localhost:5080 \
+  dotnet run --project src/FileRepo.Mcp
+```
+
+An MCP client can then connect to `http://localhost:5080/mcp`. This mode has no
+authentication or authorization by design; only bind it to a trusted network
+and add external access controls if it must be reachable remotely. Stdio
+remains the default for desktop clients.
+
+The repository also includes a launcher script that binds to all interfaces,
+which is useful when exposing the server through a GitHub Codespaces forwarded
+port:
+
+```bash
+./scripts/start-mcp-http.sh
+```
+
+Set `MCP_HTTP_HOST` and `MCP_HTTP_PORT` to override the defaults
+(`0.0.0.0:5080`), and pass additional arguments through to `dotnet run`.
 
 ### Connect Claude Desktop
 
@@ -568,4 +597,3 @@ docker-compose/qdrant/      local Qdrant container definition
 pip install -U huggingface_hub
 hf download Xenova/bge-small-en-v1.5 --local-dir ./models/bge-small-en-v1.5-onnx
 ```
-
