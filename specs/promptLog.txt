@@ -66,3 +66,10 @@ As a software engineer, update the README to provide a more robust overview of t
     - how to run webapi
     - how to run unit tests
 
+===
+
+As a software engineer, I should be able to use the vector search operations of FileRepo.Web via MCP.
+- For this first draft, do not worry about auth
+- use insights from https://devblogs.microsoft.com/dotnet/build-a-model-context-protocol-mcp-server-in-csharp/
+- update README with instructions for connecting to the MCP server using claude
+
