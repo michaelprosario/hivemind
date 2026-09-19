@@ -4,6 +4,7 @@ using FileRepo.Core.VectorSearch;
 using FileRepo.Infrastructure;
 using FileRepo.Web;
 using Microsoft.AspNetCore.Http.Features;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 var maxSize = builder.Configuration.GetValue<long?>("FileRepository:MaxFileSizeBytes") ?? 10_485_760;
@@ -12,7 +13,8 @@ builder.Services.AddFileRepositoryInfrastructure(builder.Configuration);
 builder.Services.AddVectorSearchInfrastructure(builder.Configuration);
 builder.Services.Configure<FormOptions>(o => o.MultipartBodyLengthLimit = maxSize);
 builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = maxSize);
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options =>
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddEndpointsApiExplorer();

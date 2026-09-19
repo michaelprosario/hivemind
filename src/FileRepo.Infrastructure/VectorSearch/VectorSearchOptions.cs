@@ -9,6 +9,7 @@ public sealed class VectorSearchOptions
     [MinLength(1)] public string[] SupportedExtensions { get; set; } = [".txt", ".md"];
     [Range(1, 100_000)] public int ChunkSizeCharacters { get; set; } = 1_600;
     [Range(0, 99_999)] public int ChunkOverlapCharacters { get; set; } = 240;
+    [Range(1, 100_000)] public int MaxFilesPerDirectoryIngest { get; set; } = 500;
     [Range(1, 128)] public int EmbeddingBatchSize { get; set; } = 32;
     [Required] public string ModelDirectory { get; set; } = "";
     [Required] public string ModelRevision { get; set; } = "";

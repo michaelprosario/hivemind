@@ -32,9 +32,11 @@ public static class DependencyInjection
             return client;
         });
         services.AddSingleton<ISourceTextReader, FileSystemSourceTextReader>();
+        services.AddSingleton<IDirectoryFileEnumerator, FileSystemDirectoryEnumerator>();
         services.AddSingleton<ITextChunker, TextChunker>();
         services.AddSingleton<ITextEmbeddingProvider, OnnxTextEmbeddingProvider>();
         services.AddSingleton<IVectorDocumentStore, QdrantVectorDocumentStore>();
+        services.AddScoped<IDirectoryIngestionService, DirectoryIngestionService>();
         services.AddSingleton(sp =>
         {
             var options = sp.GetRequiredService<IOptions<VectorSearchOptions>>().Value;

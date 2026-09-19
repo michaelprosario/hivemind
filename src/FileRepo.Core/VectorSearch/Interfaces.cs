@@ -13,6 +13,21 @@ public interface IVectorDocumentService
         CancellationToken ct);
 }
 
+public interface IDirectoryIngestionService
+{
+    Task<AppResult<IngestedVectorDirectory>> IngestDirectoryAsync(
+        IngestVectorDocumentDirectoryCommand command,
+        CancellationToken ct);
+}
+
+public interface IDirectoryFileEnumerator
+{
+    Task<AppResult<IReadOnlyList<string>>> EnumerateAsync(
+        string directoryPath,
+        bool includeSubdirectories,
+        CancellationToken ct);
+}
+
 public interface ISourceTextReader
 {
     Task<AppResult<SourceText>> ReadAsync(string sourcePath, CancellationToken ct);

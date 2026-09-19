@@ -35,3 +35,34 @@ Tech stack
 - Use local Qdrant vector db
 
 Write techPlanForVectorDb.md
+
+===
+
+think about the following user stories
+- as a dev, I should be able to ingest a collection files located at a path
+    - dev can specify the input path for files
+    - system will iterate over files in folder and ingest each into the vector database
+    - dev can specify the index name
+    - teams will be able to share common knowledge into the vector database
+
+- document in ingestionAllTechSpec.md
+
+====
+
+As a software engineer, update the README to provide a more robust overview of the project
+
+- purpose: 
+    - teams can upload shared knowledge to a folder; team can search shared knowledge using vector database
+    - provide a case study in making an MCP server
+- discuss key features
+- mermaid diagram of architecture
+- review architecture overview    
+    - vital services
+- review how a dev get started with the solution
+    - install process for all key elements
+- sample API calls
+- configuration details
+- dev details
+    - how to run webapi
+    - how to run unit tests
+

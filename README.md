@@ -55,6 +55,19 @@ curl -H 'Content-Type: application/json' \
   http://localhost:5000/api/vector-documents/search
 ```
 
+Ingest a directory sequentially, optionally including subdirectories. The
+response reports each file as `Ingested`, `Skipped`, or `Failed`:
+
+```bash
+curl -H 'Content-Type: application/json' \
+  -d '{"vectorIndexName":"docs_v1","directoryPath":"./data/files/docs","includeSubdirectories":true}' \
+  http://localhost:5000/api/vector-documents/ingest-directory
+```
+
+Directory ingestion is limited by `VectorSearch:MaxFilesPerDirectoryIngest`
+(500 by default) and uses the same allowed-root and supported-extension rules
+as single-file ingestion.
+
 ## Validate
 
 ```bash
@@ -67,5 +80,4 @@ dotnet test FileRepository.slnx
 - navigate to root of your workspace
 - pip install -U huggingface_hub
 - hf download Xenova/bge-small-en-v1.5 --local-dir ./models/bge-small-en-v1.5-onnx
-
 

@@ -3,6 +3,10 @@ using FileRepo.Core.VectorSearch;
 namespace FileRepo.Web.Contracts;
 
 public sealed record IngestVectorDocumentRequest(string VectorIndexName, string SourcePath);
+public sealed record IngestVectorDocumentDirectoryRequest(
+    string VectorIndexName,
+    string DirectoryPath,
+    bool IncludeSubdirectories = false);
 public sealed record SearchVectorDocumentsRequest(string VectorIndexName, string QueryText, int Take = 5);
 
 public sealed record IngestVectorDocumentResponse(
@@ -34,3 +38,35 @@ public sealed record VectorSearchHitResponse(
 }
 
 public sealed record SearchVectorDocumentsResponse(IReadOnlyList<VectorSearchHitResponse> Results);
+
+public sealed record DirectoryFileOutcomeResponse(
+    string SourcePath,
+    DirectoryFileIngestStatus Status,
+    IngestVectorDocumentResponse? Document,
+    string? Reason)
+{
+    public static DirectoryFileOutcomeResponse From(DirectoryFileOutcome outcome) => new(
+        outcome.SourcePath,
+        outcome.Status,
+        outcome.Document is null ? null : IngestVectorDocumentResponse.From(outcome.Document),
+        outcome.Reason);
+}
+
+public sealed record IngestedVectorDirectoryResponse(
+    string VectorIndexName,
+    string DirectoryPath,
+    int FilesDiscovered,
+    int IngestedCount,
+    int SkippedCount,
+    int FailedCount,
+    IReadOnlyList<DirectoryFileOutcomeResponse> Files)
+{
+    public static IngestedVectorDirectoryResponse From(IngestedVectorDirectory result) => new(
+        result.VectorIndexName,
+        result.DirectoryPath,
+        result.FilesDiscovered,
+        result.IngestedCount,
+        result.SkippedCount,
+        result.FailedCount,
+        result.Files.Select(DirectoryFileOutcomeResponse.From).ToArray());
+}

@@ -16,6 +16,28 @@ public sealed record IngestVectorDocumentCommand(
     string VectorIndexName,
     string SourcePath);
 
+public sealed record IngestVectorDocumentDirectoryCommand(
+    string VectorIndexName,
+    string DirectoryPath,
+    bool IncludeSubdirectories = false);
+
+public enum DirectoryFileIngestStatus { Ingested, Skipped, Failed }
+
+public sealed record DirectoryFileOutcome(
+    string SourcePath,
+    DirectoryFileIngestStatus Status,
+    IngestedVectorDocument? Document,
+    string? Reason);
+
+public sealed record IngestedVectorDirectory(
+    string VectorIndexName,
+    string DirectoryPath,
+    int FilesDiscovered,
+    int IngestedCount,
+    int SkippedCount,
+    int FailedCount,
+    IReadOnlyList<DirectoryFileOutcome> Files);
+
 public sealed record SearchVectorDocumentsQuery(
     string VectorIndexName,
     string QueryText,
