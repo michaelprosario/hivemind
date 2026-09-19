@@ -17,3 +17,21 @@ Think about the following requirements..
 
 
 Document tech plan to implement the user stories above in techPlan1.md
+
+===
+
+Think about the following user stories
+- specs/cleanArchitecture.md
+- As a dev, I should be able ingest file from a specified file path into my qdrant vector db
+    - system should leverage free,but quality embedding model for implementation
+    - specified file will be available on local file system
+    - file content should be segmented
+    - vector database should link original file name to segment for user reference
+- As a dev, I should be able to query the vector database to find segments similar to my incoming query
+    - in request, I can specify the number of segments to return
+    - the incoming query text will need to be converted to vector to find similar items
+
+Tech stack
+- Use local Qdrant vector db
+
+Write techPlanForVectorDb.md
