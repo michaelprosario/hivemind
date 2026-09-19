@@ -61,3 +61,11 @@ curl -H 'Content-Type: application/json' \
 dotnet build FileRepository.slnx
 dotnet test FileRepository.slnx
 ```
+
+### How do we download ONNX models for embedding?
+
+- navigate to root of your workspace
+- pip install -U huggingface_hub
+- hf download Xenova/bge-small-en-v1.5 --local-dir ./models/bge-small-en-v1.5-onnx
+
+
