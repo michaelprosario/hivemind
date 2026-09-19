@@ -1,0 +1,19 @@
+Think about the following requirements..
+- explore specs/cleanArchitecture.md
+- As a user, I should be able to add a file to the file repository
+- As a user, I should be able to delete a file from a file repository
+- As a user, I should be able to update a file in the repository
+- As a user, I should be able to get a file 
+- As a user, I should be able to list files in repo
+
+### tech stack
+- c#
+- dotnet core
+- using webapi controllers
+- favor posts for controller actions
+- unit tests with nunit
+- implement some kind of swagger tech
+- fileRepo operations will use a file system folder configured by appSettings
+
+
+Document tech plan to implement the user stories above in techPlan1.md
