@@ -62,6 +62,10 @@ A small, clean-architecture ASP.NET Core solution for three related jobs:
   `ingest_directory`, and `search` are exposed over stdio or Streamable HTTP via
   `FileRepo.Mcp`, so an MCP-compatible AI client can ingest and search the
   shared knowledge base as naturally as a human calling the REST API.
+- **CLI for updating the vector database**: `FileRepo.Cli` provides
+  `ingest-file` and `ingest-directory` commands for scripting or ad hoc
+  ingestion straight from a terminal, using the same Core services as the
+  Web API and MCP server.
 
 ## Architecture overview
 
@@ -491,6 +495,52 @@ mode**.
    Copilot will prompt for confirmation before invoking each tool, the same
    as it does for any other MCP tool call.
 
+## CLI tool
+
+`FileRepo.Cli` is a small standalone console app for ingesting content into
+the vector database from the command line, without going through the HTTP
+API or an MCP client. Like `FileRepo.Mcp`, it's a thin host that calls the
+same `IVectorDocumentService` and `IDirectoryIngestionService` used
+everywhere else, so ingestion behaves identically no matter which front end
+started it.
+
+Build it once, then invoke the compiled executable (or use `dotnet run` in
+development):
+
+```bash
+dotnet build src/FileRepo.Cli/FileRepo.Cli.csproj
+
+# Ingest a single file
+dotnet run --project src/FileRepo.Cli -- ingest-file --index docs_v1 --path ./data/files/notes.md
+
+# Ingest every supported file directly under a folder
+dotnet run --project src/FileRepo.Cli -- ingest-directory --index docs_v1 --path ./data/files
+
+# ...including subdirectories
+dotnet run --project src/FileRepo.Cli -- ingest-directory --index docs_v1 --path ./data/files --recursive
+```
+
+| Command | Maps to | Description |
+|---|---|---|
+| `ingest-file` | `IVectorDocumentService.IngestAsync` | Indexes a single permitted local text file into a named vector index. |
+| `ingest-directory` | `IDirectoryIngestionService.IngestDirectoryAsync` | Indexes every supported file under a permitted local directory (add `--recursive` to include subdirectories) into a named vector index, reporting each file as `Ingested`, `Skipped`, or `Failed`. |
+
+Both commands require `--index` (`-i`, the Qdrant collection name) and
+`--path` (`-p`, the file or directory to ingest), and print the resulting
+`AppResult` as JSON to stdout — `{"success":true,"data":{...}}` on success,
+or `{"success":false,"status":"Invalid","messages":[...],"validationErrors":[...]}`
+on failure — with a non-zero exit code on failure so it's easy to script.
+Run `dotnet run --project src/FileRepo.Cli -- --help` for the full usage.
+
+Make sure Qdrant is running and the embedding model is downloaded first (see
+[Getting started](#getting-started)). `src/FileRepo.Cli/appsettings.json`
+has its own `VectorSearch` section, defaulted (like `FileRepo.Mcp`) to point
+at the sibling `FileRepo.Web` project's `data/` and `models/` folders via
+relative `../FileRepo.Web/...` paths, so all three processes share the same
+allowed root, model, and catalog. Override it with `Section__Key`
+environment variables, or by appending extra arguments (for example
+`--VectorSearch:QdrantEndpoint http://localhost:6333`).
+
 ## Configuration
 
 All settings live in `src/FileRepo.Web/appsettings.json` and can be
@@ -548,6 +598,15 @@ This talks JSON-RPC over stdio, so it's meant to be launched by an MCP
 client (see [Connect Claude Desktop](#connect-claude-desktop) above) rather
 than driven directly from a terminal.
 
+### Run the CLI
+
+```bash
+dotnet run --project src/FileRepo.Cli -- ingest-file --index docs_v1 --path ./data/files/notes.md
+dotnet run --project src/FileRepo.Cli -- ingest-directory --index docs_v1 --path ./data/files --recursive
+```
+
+See [CLI tool](#cli-tool) above for the full command reference.
+
 ### Build
 
 ```bash
@@ -583,6 +642,7 @@ src/
   FileRepo.Infrastructure/  file system, ONNX embedding, Qdrant adapters, DI composition
   FileRepo.Web/             controllers, HTTP contracts, Program.cs startup
   FileRepo.Mcp/             MCP server (stdio) exposing vector search tools, Program.cs startup
+  FileRepo.Cli/             console CLI for ingesting files/directories into the vector index, Program.cs startup
 tests/
   FileRepo.Core.UnitTests/
   FileRepo.Infrastructure.Tests/
