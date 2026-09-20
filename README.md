@@ -601,8 +601,8 @@ than driven directly from a terminal.
 ### Run the CLI
 
 ```bash
-dotnet run --project src/FileRepo.Cli -- ingest-file --index docs_v1 --path ./data/files/notes.md
-dotnet run --project src/FileRepo.Cli -- ingest-directory --index docs_v1 --path ./data/files --recursive
+dotnet run --project src/FileRepo.Cli -- ingest-file --index test1 --path ./data/files/notes.md
+dotnet run --project src/FileRepo.Cli -- ingest-directory --index test1 --path ./data/files --recursive
 ```
 
 See [CLI tool](#cli-tool) above for the full command reference.
