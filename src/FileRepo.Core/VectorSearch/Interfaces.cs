@@ -16,6 +16,14 @@ public interface IVectorDocumentService
         ListVectorIndexesQuery query,
         CancellationToken ct);
 
+    Task<AppResult<VectorIndexSchema>> InspectIndexSchemaAsync(
+        InspectVectorIndexSchemaQuery query,
+        CancellationToken ct);
+
+    Task<AppResult<VectorIndexInfo>> CreateIndexAsync(
+        CreateVectorIndexCommand command,
+        CancellationToken ct);
+
     Task<AppResult<StoredMemory>> StoreMemoryAsync(
         StoreMemoryCommand command,
         CancellationToken ct);
@@ -76,6 +84,15 @@ public interface IVectorDocumentStore
     Task<AppResult<IReadOnlyList<VectorIndexInfo>>> ListIndexesAsync(
         bool includeDetails,
         int expectedVectorSize,
+        CancellationToken ct);
+
+    Task<AppResult<VectorIndexSchema>> InspectIndexSchemaAsync(
+        string collectionName,
+        CancellationToken ct);
+
+    Task<AppResult<VectorIndexInfo>> CreateIndexAsync(
+        string name,
+        int vectorSize,
         CancellationToken ct);
 
     Task<AppResult<StoredMemory>> StoreMemoryAsync(

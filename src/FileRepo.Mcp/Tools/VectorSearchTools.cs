@@ -23,6 +23,35 @@ public static class VectorSearchTools
     };
 
     [McpServerTool, Description(
+        "Inspects a Qdrant vector index and reports its payload schema, indexed payload fields, point count, " +
+        "vector count, and status. Use this to determine the actual payload field names and types before " +
+        "constructing filters.")]
+    public static async Task<string> InspectIndexSchema(
+        IVectorDocumentService vectorDocumentService,
+        [Description("Vector index (Qdrant collection) name to inspect.")]
+        string collectionName,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await vectorDocumentService.InspectIndexSchemaAsync(
+            new(collectionName), cancellationToken);
+        return ToJson(result);
+    }
+
+    [McpServerTool, Description(
+        "Creates an empty Qdrant vector index with the server's embedding dimensions and Cosine distance. " +
+        "Use this to create a task-specific index before adding vectors. The name must not already exist.")]
+    public static async Task<string> CreateIndex(
+        IVectorDocumentService vectorDocumentService,
+        [Description("Unique lowercase vector index name, for example 'incident_triage'.")]
+        string name,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await vectorDocumentService.CreateIndexAsync(
+            new(name), cancellationToken);
+        return ToJson(result);
+    }
+
+    [McpServerTool, Description(
         "Finds the most semantically similar indexed text chunks in the specified Qdrant vector index for a " +
         "natural-language query, returning each match's source file (or stored memory key), location, and " +
         "similarity score. Use list_indexes to discover available index names.")]

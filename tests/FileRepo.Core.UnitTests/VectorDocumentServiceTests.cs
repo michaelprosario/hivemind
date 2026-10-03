@@ -54,6 +54,53 @@ public sealed class VectorDocumentServiceTests
     }
 
     [Test]
+    public async Task InspectIndexSchema_ValidRequest_InspectsSpecifiedCollection()
+    {
+        store.InspectIndexSchemaAsync("incident_triage", Arg.Any<CancellationToken>())
+            .Returns(AppResult<VectorIndexSchema>.Ok(new(
+                "incident_triage", [], [], 0, 0, "green")));
+
+        var result = await service.InspectIndexSchemaAsync(new("incident_triage"), default);
+
+        Assert.That(result.IsSuccess, Is.True);
+        await store.Received(1).InspectIndexSchemaAsync("incident_triage", Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task InspectIndexSchema_InvalidCollectionName_ReturnsInvalidWithoutStoreCall()
+    {
+        var result = await service.InspectIndexSchemaAsync(new("Incident Triage"), default);
+
+        Assert.That(result.Status, Is.EqualTo(ResultStatus.Invalid));
+        Assert.That(result.ValidationErrors.Any(e => e.Field == "collectionName"), Is.True);
+        await store.DidNotReceive().InspectIndexSchemaAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task CreateIndex_ValidRequest_UsesEmbeddingDimensions()
+    {
+        store.CreateIndexAsync("incident_triage", 3, Arg.Any<CancellationToken>())
+            .Returns(AppResult<VectorIndexInfo>.Ok(new(
+                "incident_triage", 3, "Cosine", 0, "created", true)));
+
+        var result = await service.CreateIndexAsync(new("incident_triage"), default);
+
+        Assert.That(result.IsSuccess, Is.True);
+        await store.Received(1).CreateIndexAsync("incident_triage", 3, Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task CreateIndex_InvalidName_ReturnsInvalidWithoutStoreCall()
+    {
+        var result = await service.CreateIndexAsync(new("Incident Triage"), default);
+
+        Assert.That(result.Status, Is.EqualTo(ResultStatus.Invalid));
+        Assert.That(result.ValidationErrors.Any(e => e.Field == "name"), Is.True);
+        await store.DidNotReceive().CreateIndexAsync(
+            Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public void TextChunker_PreservesOffsetsAndOverlap()
     {
         var chunks = new TextChunker(new VectorSearchValidationRules

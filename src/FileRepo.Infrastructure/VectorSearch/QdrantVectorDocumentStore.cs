@@ -240,6 +240,85 @@ public sealed class QdrantVectorDocumentStore(
         return AppResult<IReadOnlyList<VectorIndexInfo>>.Ok(details.Where(d => d is not null).Select(d => d!).ToArray());
     }
 
+    public async Task<AppResult<VectorIndexSchema>> InspectIndexSchemaAsync(
+        string collectionName,
+        CancellationToken ct)
+    {
+        using var response = await client.GetAsync(
+            $"/collections/{Uri.EscapeDataString(collectionName)}", ct);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return AppResult<VectorIndexSchema>.NotFound("Vector index was not found.");
+        if (!response.IsSuccessStatusCode)
+            return await QdrantFailureAsync<VectorIndexSchema>(response, ct);
+
+        using var document = await JsonDocument.ParseAsync(
+            await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+        var result = document.RootElement.GetProperty("result");
+        var schema = new List<VectorPayloadField>();
+        if (result.TryGetProperty("payload_schema", out var payloadSchema) &&
+            payloadSchema.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var field in payloadSchema.EnumerateObject())
+            {
+                var dataType = field.Value.TryGetProperty("data_type", out var type) &&
+                               type.ValueKind == JsonValueKind.String
+                    ? type.GetString()
+                    : null;
+                var pointsIndexed = field.Value.TryGetProperty("points", out var points) &&
+                                    points.ValueKind == JsonValueKind.Number
+                    ? points.GetInt64()
+                    : (long?)null;
+                schema.Add(new VectorPayloadField(field.Name, dataType, pointsIndexed));
+            }
+        }
+
+        var pointCount = ReadNullableInt64(result, "points_count");
+        var vectorCount = ReadNullableInt64(result, "vectors_count")
+                          ?? ReadNullableInt64(result, "indexed_vectors_count");
+        var status = result.TryGetProperty("status", out var statusElement) &&
+                     statusElement.ValueKind == JsonValueKind.String
+            ? statusElement.GetString()
+            : null;
+        return AppResult<VectorIndexSchema>.Ok(new(
+            collectionName,
+            schema,
+            schema.Select(field => field.Name).ToArray(),
+            pointCount,
+            vectorCount,
+            status));
+    }
+
+    public async Task<AppResult<VectorIndexInfo>> CreateIndexAsync(
+        string name,
+        int vectorSize,
+        CancellationToken ct)
+    {
+        var path = $"/collections/{Uri.EscapeDataString(name)}";
+        using (var existing = await client.GetAsync(path, ct))
+        {
+            if (existing.IsSuccessStatusCode)
+                return AppResult<VectorIndexInfo>.Conflict($"Vector index '{name}' already exists.");
+            if (existing.StatusCode != HttpStatusCode.NotFound)
+                return await QdrantFailureAsync<VectorIndexInfo>(existing, ct);
+        }
+
+        using var request = new HttpRequestMessage(HttpMethod.Put, path)
+        {
+            Content = JsonContent.Create(new
+            {
+                vectors = new { size = vectorSize, distance = "Cosine" }
+            }, options: JsonOptions)
+        };
+        using var response = await client.SendAsync(request, ct);
+        if (response.StatusCode == HttpStatusCode.Conflict)
+            return AppResult<VectorIndexInfo>.Conflict($"Vector index '{name}' already exists.");
+        if (!response.IsSuccessStatusCode)
+            return await QdrantFailureAsync<VectorIndexInfo>(response, ct);
+
+        return AppResult<VectorIndexInfo>.Ok(new(
+            name, vectorSize, "Cosine", 0, null, true));
+    }
+
     private async Task<VectorIndexInfo?> ReadIndexInfoAsync(string name, int expectedVectorSize, CancellationToken ct)
     {
         using var response = await client.GetAsync($"/collections/{Uri.EscapeDataString(name)}", ct);
@@ -263,6 +342,24 @@ public sealed class QdrantVectorDocumentStore(
         var compatible = size == expectedVectorSize && string.Equals(distance, "Cosine", StringComparison.OrdinalIgnoreCase);
         return new VectorIndexInfo(name, size, distance, points, status, compatible);
     }
+
+    private async Task<AppResult<T>> QdrantFailureAsync<T>(
+        HttpResponseMessage response,
+        CancellationToken ct)
+    {
+        var detail = await response.Content.ReadAsStringAsync(ct);
+        logger.LogError("Qdrant request {Method} {Uri} failed with {StatusCode}: {Detail}",
+            response.RequestMessage?.Method, response.RequestMessage?.RequestUri, (int)response.StatusCode, detail);
+        return AppResult<T>.Error(
+            $"Qdrant request failed with status {(int)response.StatusCode}: {detail}");
+    }
+
+    private static long? ReadNullableInt64(JsonElement element, string propertyName) =>
+        element.TryGetProperty(propertyName, out var property) &&
+        property.ValueKind == JsonValueKind.Number &&
+        property.TryGetInt64(out var value)
+            ? value
+            : null;
 
     private async Task EnsureCollectionAsync(string vectorIndexName, int vectorSize, CancellationToken ct)
     {

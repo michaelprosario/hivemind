@@ -91,10 +91,123 @@ public class QdrantVectorDocumentStoreTests
         Assert.That(handler.Requests.Any(r => r.Method == HttpMethod.Put && r.Path == $"/collections/{IndexName}"), Is.False);
     }
 
+    [Test]
+    public async Task InspectIndexSchemaAsync_ReturnsPayloadFieldsAndCounts()
+    {
+        var handler = new FakeQdrantHandler
+        {
+            OnGetCollection = _ => JsonResponse(HttpStatusCode.OK, new
+            {
+                result = new
+                {
+                    status = "green",
+                    points_count = 12,
+                    indexed_vectors_count = 12,
+                    payload_schema = new
+                    {
+                        status = new { data_type = "keyword", points = 8 },
+                        is_open = new { data_type = "bool", points = 5 }
+                    }
+                }
+            })
+        };
+        var store = CreateStore(handler);
+
+        var result = await store.InspectIndexSchemaAsync(IndexName, default);
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value!.PointsCount, Is.EqualTo(12));
+        Assert.That(result.Value.VectorCount, Is.EqualTo(12));
+        Assert.That(result.Value.IndexedFields, Is.EquivalentTo(new[] { "status", "is_open" }));
+        Assert.That(result.Value.PayloadSchema.Single(f => f.Name == "status").DataType, Is.EqualTo("keyword"));
+        Assert.That(result.Value.PayloadSchema.Single(f => f.Name == "is_open").DataType, Is.EqualTo("bool"));
+    }
+
+    [Test]
+    public async Task InspectIndexSchemaAsync_MissingCollection_ReturnsNotFound()
+    {
+        var handler = new FakeQdrantHandler
+        {
+            OnGetCollection = _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        };
+
+        var result = await CreateStore(handler).InspectIndexSchemaAsync(IndexName, default);
+
+        Assert.That(result.Status, Is.EqualTo(FileRepo.Core.Common.ResultStatus.NotFound));
+    }
+
+    [Test]
+    public async Task CreateIndexAsync_CreatesCosineCollectionAtEmbeddingSize()
+    {
+        var handler = new FakeQdrantHandler
+        {
+            OnGetCollection = _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        };
+
+        var result = await CreateStore(handler).CreateIndexAsync(IndexName, 384, default);
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value!.VectorSize, Is.EqualTo(384));
+        Assert.That(result.Value.Distance, Is.EqualTo("Cosine"));
+        var creation = handler.Requests.Single(r =>
+            r.Method == HttpMethod.Put && r.Path == $"/collections/{IndexName}");
+        Assert.That(creation.Body, Does.Contain("\"size\":384"));
+        Assert.That(creation.Body, Does.Contain("\"distance\":\"Cosine\""));
+    }
+
+    [Test]
+    public async Task CreateIndexAsync_ExistingCollection_ReturnsConflict()
+    {
+        var handler = new FakeQdrantHandler
+        {
+            OnGetCollection = _ => JsonResponse(HttpStatusCode.OK, new { result = new { } })
+        };
+
+        var result = await CreateStore(handler).CreateIndexAsync(IndexName, 384, default);
+
+        Assert.That(result.Status, Is.EqualTo(FileRepo.Core.Common.ResultStatus.Conflict));
+        Assert.That(handler.Requests.Any(r => r.Method == HttpMethod.Put), Is.False);
+    }
+
+    [Test]
+    public async Task CreateIndexAsync_ConcurrentCreationConflict_ReturnsConflict()
+    {
+        var handler = new FakeQdrantHandler
+        {
+            OnGetCollection = _ => new HttpResponseMessage(HttpStatusCode.NotFound),
+            OnCreateCollection = _ => new HttpResponseMessage(HttpStatusCode.Conflict)
+        };
+
+        var result = await CreateStore(handler).CreateIndexAsync(IndexName, 384, default);
+
+        Assert.That(result.Status, Is.EqualTo(FileRepo.Core.Common.ResultStatus.Conflict));
+    }
+
+    [Test]
+    public async Task InspectIndexSchemaAsync_QdrantFailure_ReturnsError()
+    {
+        var handler = new FakeQdrantHandler
+        {
+            OnGetCollection = _ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+            {
+                Content = new StringContent("Qdrant unavailable")
+            }
+        };
+
+        var result = await CreateStore(handler).InspectIndexSchemaAsync(IndexName, default);
+
+        Assert.That(result.Status, Is.EqualTo(FileRepo.Core.Common.ResultStatus.Error));
+        Assert.That(result.Messages.Single(), Does.Contain("503"));
+    }
+
+    private static HttpResponseMessage JsonResponse(HttpStatusCode statusCode, object body) =>
+        new(statusCode) { Content = JsonContent.Create(body) };
+
     private sealed class FakeQdrantHandler : HttpMessageHandler
     {
         public List<RecordedRequest> Requests { get; } = [];
         public Func<string, HttpResponseMessage>? OnGetCollection { get; set; }
+        public Func<string, HttpResponseMessage>? OnCreateCollection { get; set; }
         public Func<string>? OnScroll { get; set; }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
@@ -105,6 +218,12 @@ public class QdrantVectorDocumentStoreTests
 
             if (request.Method == HttpMethod.Get && path.StartsWith("/collections/", StringComparison.Ordinal))
                 return OnGetCollection?.Invoke(path) ?? new HttpResponseMessage(HttpStatusCode.NotFound);
+
+            if (request.Method == HttpMethod.Put &&
+                path.StartsWith("/collections/", StringComparison.Ordinal) &&
+                !path["/collections/".Length..].Contains("/", StringComparison.Ordinal) &&
+                OnCreateCollection is not null)
+                return OnCreateCollection(path);
 
             if (request.Method == HttpMethod.Post && path.EndsWith("/points/scroll", StringComparison.Ordinal))
                 return new HttpResponseMessage(HttpStatusCode.OK)

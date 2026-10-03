@@ -111,3 +111,20 @@ public sealed record VectorIndexInfo(
     long? PointsCount,
     string? Status,
     bool? IsCompatible);
+
+public sealed record InspectVectorIndexSchemaQuery(string CollectionName);
+
+public sealed record VectorPayloadField(
+    string Name,
+    string? DataType,
+    long? PointsIndexed);
+
+public sealed record VectorIndexSchema(
+    string Name,
+    IReadOnlyList<VectorPayloadField> PayloadSchema,
+    IReadOnlyList<string> IndexedFields,
+    long? PointsCount,
+    long? VectorCount,
+    string? Status);
+
+public sealed record CreateVectorIndexCommand(string Name);

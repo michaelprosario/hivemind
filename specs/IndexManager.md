@@ -17,13 +17,12 @@ task-specific vector search.
     information.
   - Missing collections and inspection errors are reported explicitly.
 
-## `create_collection`
+## `create_index`
 
-- **Input:** collection `name` and `distance_metric` (Cosine).
+- **Input:** index `name` (Cosine).
 - **Purpose:** create task-specific vector indexes on demand rather than
-  requiring every task to reuse a shared collection.
+  requiring every task to reuse a shared index.
 - **Acceptance criteria:**
-  - The tool creates a collection using the requested name and distance metric.
-  - The collection's vector configuration is compatible with the embedding
-    dimensions used by the application.
+  - The tool creates a index using the requested name and distance metric gets configured to cosine.
+  - The index's vector configuration is compatible with the embedding dimensions used by the application.
   - Creation failures, including a name conflict, are reported explicitly.

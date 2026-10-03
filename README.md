@@ -59,10 +59,12 @@ A small, clean-architecture ASP.NET Core solution for three related jobs:
   to HTTP status codes uniformly.
 - **Swagger / OpenAPI** UI for exploring and trying every HTTP endpoint.
 - **MCP tools for the same vector search use cases**: `ingest_file`,
-  `ingest_directory`, `search`, `list_indexes`, and `store_memory` are exposed over stdio or Streamable HTTP via
-  `FileRepo.Mcp`, so an MCP-compatible AI client can ingest, search, and
-  store its own memories (notes, code snippets, preferences, task progress)
-  in the shared knowledge base as naturally as a human calling the REST API.
+  `ingest_directory`, `search`, `list_indexes`, `inspect_index_schema`,
+  `create_index`, and `store_memory` are exposed over stdio or Streamable HTTP
+  via `FileRepo.Mcp`, so an MCP-compatible AI client can inspect payload fields,
+  create task-specific indexes, ingest, search, and store its own memories
+  (notes, code snippets, preferences, task progress) in the shared knowledge
+  base as naturally as a human calling the REST API.
 - **CLI for updating the vector database**: `FileRepo.Cli` provides
   `ingest-file` and `ingest-directory` commands for scripting or ad hoc
   ingestion straight from a terminal, using the same Core services as the
@@ -149,7 +151,7 @@ flowchart TB
 | `ITextChunker` / `TextChunker` | Core | Splits text into overlapping character-offset chunks for embedding. |
 | `ITextEmbeddingProvider` / `OnnxTextEmbeddingProvider` | Infrastructure | Tokenizes text and runs the local ONNX model to produce normalized embedding vectors. |
 | `IVectorDocumentStore` / `QdrantVectorDocumentStore` | Infrastructure | Creates/validates Qdrant collections, upserts and activates new versions, retires old versions, and runs similarity search. |
-| `VectorSearchTools` (`FileRepo.Mcp`) | Web (MCP front end) | Static `[McpServerTool]` methods (`search`, `list_indexes`, `store_memory`) that call straight into `IVectorDocumentService` / `IDirectoryIngestionService` and serialize the `AppResult` as JSON for the calling MCP client. |
+| `VectorSearchTools` (`FileRepo.Mcp`) | Web (MCP front end) | Static `[McpServerTool]` methods (`search`, `list_indexes`, `inspect_index_schema`, `create_index`, `store_memory`) that call straight into `IVectorDocumentService` / `IDirectoryIngestionService` and serialize the `AppResult` as JSON for the calling MCP client. |
 
 ## Getting started
 
@@ -358,6 +360,8 @@ every client with that key has access to the same tools and data.
 |---|---|---|
 | `search` | `IVectorDocumentService.SearchAsync` | Finds the top-`N` semantically similar chunks in a named vector index for a natural-language query. |
 | `list_indexes` | `IVectorDocumentService.ListIndexesAsync` | Lists the vector indexes (Qdrant collections) available in the instance, with vector size, distance metric, point count, and compatibility with this server's embedding model. |
+| `inspect_index_schema` | `IVectorDocumentService.InspectIndexSchemaAsync` | Reports payload schema fields and types, indexed fields, point count, vector count, and status for a collection; returns not-found for a missing collection. |
+| `create_index` | `IVectorDocumentService.CreateIndexAsync` | Creates an empty task-specific vector index using this server's embedding dimensions and Cosine distance; returns conflict if the name already exists. |
 | `store_memory` | `IVectorDocumentService.StoreMemoryAsync` | Stores text (notes, code snippets, user preferences, task progress) as agent memory in a named vector index, with optional `tags`, `author`, `sourceUrl`, and an idempotent `key` for updating an existing memory in place. Creates the index automatically if it doesn't exist. |
 
 Each tool returns a JSON string: `{"success":true,"data":{...}}` on success,

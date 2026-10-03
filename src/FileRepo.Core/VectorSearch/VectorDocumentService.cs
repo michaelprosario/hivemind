@@ -60,6 +60,24 @@ public sealed partial class VectorDocumentService(
         CancellationToken ct) =>
         store.ListIndexesAsync(query.IncludeDetails, embeddingProvider.VectorSize, ct);
 
+    public Task<AppResult<VectorIndexSchema>> InspectIndexSchemaAsync(
+        InspectVectorIndexSchemaQuery query,
+        CancellationToken ct)
+    {
+        var errors = ValidateIndex(query.CollectionName, "collectionName");
+        if (errors.Count > 0) return Task.FromResult(AppResult<VectorIndexSchema>.Invalid(errors));
+        return store.InspectIndexSchemaAsync(query.CollectionName, ct);
+    }
+
+    public Task<AppResult<VectorIndexInfo>> CreateIndexAsync(
+        CreateVectorIndexCommand command,
+        CancellationToken ct)
+    {
+        var errors = ValidateIndex(command.Name, "name");
+        if (errors.Count > 0) return Task.FromResult(AppResult<VectorIndexInfo>.Invalid(errors));
+        return store.CreateIndexAsync(command.Name, embeddingProvider.VectorSize, ct);
+    }
+
     public async Task<AppResult<StoredMemory>> StoreMemoryAsync(
         StoreMemoryCommand command,
         CancellationToken ct)
@@ -113,11 +131,11 @@ public sealed partial class VectorDocumentService(
     [GeneratedRegex("^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$", RegexOptions.CultureInvariant)]
     private static partial Regex MemoryKeyPattern();
 
-    private static List<ValidationError> ValidateIndex(string indexName)
+    private static List<ValidationError> ValidateIndex(string indexName, string field = "vectorIndexName")
     {
         var errors = new List<ValidationError>();
         if (string.IsNullOrWhiteSpace(indexName) || !IndexNamePattern().IsMatch(indexName))
-            errors.Add(new ValidationError("vectorIndexName", "Vector index name must match ^[a-z0-9][a-z0-9_-]{0,62}$."));
+            errors.Add(new ValidationError(field, "Vector index name must match ^[a-z0-9][a-z0-9_-]{0,62}$."));
         return errors;
     }
 
