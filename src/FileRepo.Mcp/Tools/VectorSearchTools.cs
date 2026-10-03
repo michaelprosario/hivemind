@@ -24,7 +24,8 @@ public static class VectorSearchTools
 
     [McpServerTool, Description(
         "Finds the most semantically similar indexed text chunks in the specified Qdrant vector index for a " +
-        "natural-language query, returning each match's source file, location, and similarity score.")]
+        "natural-language query, returning each match's source file, location, and similarity score. " +
+        "Use list_indexes to discover available index names.")]
     public static async Task<string> Search(
         IVectorDocumentService vectorDocumentService,
         [Description("Vector index (Qdrant collection) name to search, e.g. 'docs_v1'.")]
@@ -37,6 +38,19 @@ public static class VectorSearchTools
     {
         var result = await vectorDocumentService.SearchAsync(
             new(vectorIndexName, queryText, take), cancellationToken);
+        return ToJson(result);
+    }
+
+    [McpServerTool, Description(
+        "Lists the vector indexes (Qdrant collections) available in the Qdrant instance, with vector size, " +
+        "distance metric, point count, status, and whether each is compatible with this server's embedding model.")]
+    public static async Task<string> ListIndexes(
+        IVectorDocumentService vectorDocumentService,
+        [Description("Include per-index details. Set false for names only. Defaults to true.")]
+        bool includeDetails = true,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await vectorDocumentService.ListIndexesAsync(new(includeDetails), cancellationToken);
         return ToJson(result);
     }
 

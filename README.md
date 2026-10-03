@@ -59,7 +59,7 @@ A small, clean-architecture ASP.NET Core solution for three related jobs:
   to HTTP status codes uniformly.
 - **Swagger / OpenAPI** UI for exploring and trying every HTTP endpoint.
 - **MCP tools for the same vector search use cases**: `ingest_file`,
-  `ingest_directory`, and `search` are exposed over stdio or Streamable HTTP via
+  `ingest_directory`, `search`, and `list_indexes` are exposed over stdio or Streamable HTTP via
   `FileRepo.Mcp`, so an MCP-compatible AI client can ingest and search the
   shared knowledge base as naturally as a human calling the REST API.
 - **CLI for updating the vector database**: `FileRepo.Cli` provides
@@ -316,11 +316,9 @@ It is a thin, standalone console host: it calls the exact same
 search behavior to the HTTP API, against the same Qdrant index, model, and
 document catalog.
 
-**This first draft has no authentication or authorization** — anyone who can
-start the process (or who administers the MCP client configuration) can call
-its tools. Treat it the same as running the Web API without a token: fine for
-local, single-user development; not something to expose beyond your own
-machine as-is.
+The stdio transport is intended for a trusted local MCP client. The HTTP
+transport requires a shared API key configured by the server administrator;
+every client with that key has access to the same tools and data.
 
 ### Available tools
 
@@ -360,19 +358,41 @@ somewhere else.
 
 Set `Mcp:Transport` to `http` (or use the equivalent
 `Mcp__Transport=http` environment variable) to expose the same tools through
-the SDK's Streamable HTTP endpoint. The default endpoint is `/mcp`; override it
-with `Mcp:HttpPath` or `Mcp__HttpPath`. Configure the listen address with the
-normal ASP.NET Core `ASPNETCORE_URLS` setting:
+the SDK's Streamable HTTP endpoint. HTTP startup requires a non-empty
+administrator-configured API key. Set `Mcp:ApiKey` through a secret provider or
+the `Mcp__ApiKey` environment variable; never commit the value to
+`appsettings.json` or pass it on a command line. Every request to the MCP
+endpoint, including initialization and tool calls, must include that value in
+the `X-API-Key` header.
+
+The default endpoint is `/mcp`; override it with `Mcp:HttpPath` or
+`Mcp__HttpPath`. Configure the listen address with the normal ASP.NET Core
+`ASPNETCORE_URLS` setting:
 
 ```bash
-Mcp__Transport=http ASPNETCORE_URLS=http://localhost:5080 \
-  dotnet run --project src/FileRepo.Mcp
+export Mcp__ApiKey="your-generated-secret"
+MCP_HTTP_HOST=127.0.0.1 ./scripts/start-mcp-http.sh
 ```
 
-An MCP client can then connect to `http://localhost:5080/mcp`. This mode has no
-authentication or authorization by design; only bind it to a trusted network
-and add external access controls if it must be reachable remotely. Stdio
-remains the default for desktop clients.
+An MCP client can connect to `http://localhost:5080/mcp` and must attach the
+header on all MCP HTTP requests. For clients that support custom HTTP headers,
+the remote-server configuration is conceptually:
+
+```json
+{
+  "url": "https://your-mcp-host.example/mcp",
+  "headers": {
+    "X-API-Key": "the-same-secret-configured-on-the-server"
+  }
+}
+```
+
+Client configuration formats vary; configure the URL and custom header using
+the client-specific settings. Use HTTPS whenever traffic leaves the local
+machine or crosses an untrusted network, typically with TLS terminated by a
+trusted reverse proxy. The launcher binds to all interfaces by default, so
+configure the key and protect network traffic before exposing it. Stdio
+remains unchanged and does not require an API key.
 
 The repository also includes a launcher script that binds to all interfaces,
 which is useful when exposing the server through a GitHub Codespaces forwarded
@@ -383,7 +403,9 @@ port:
 ```
 
 Set `MCP_HTTP_HOST` and `MCP_HTTP_PORT` to override the defaults
-(`0.0.0.0:5080`), and pass additional arguments through to `dotnet run`.
+(`0.0.0.0:5080`). Set `Mcp__ApiKey` before launching; the script exits without
+starting if it is missing. It does not print or forward the key as a command
+line argument.
 
 ### Connect Claude Desktop
 

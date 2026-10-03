@@ -28,6 +28,15 @@ public sealed class VectorDocumentsController(
         return result.ToActionResult(this, value => Ok(IngestedVectorDirectoryResponse.From(value)));
     }
 
+    /// <summary>Lists the vector indexes (Qdrant collections) in the Qdrant instance.</summary>
+    [HttpGet("indexes"), ProducesResponseType(typeof(ListVectorIndexesResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListIndexes([FromQuery] bool includeDetails = true, CancellationToken ct = default)
+    {
+        var result = await service.ListIndexesAsync(new(includeDetails), ct);
+        return result.ToActionResult(this,
+            indexes => Ok(new ListVectorIndexesResponse(indexes.Select(VectorIndexResponse.From).ToArray())));
+    }
+
     /// <summary>Finds semantically similar text segments in the specified vector index.</summary>
     [HttpPost("search"), ProducesResponseType(typeof(SearchVectorDocumentsResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> Search(SearchVectorDocumentsRequest request, CancellationToken ct)

@@ -70,3 +70,17 @@ public sealed record IngestedVectorDirectoryResponse(
         result.FailedCount,
         result.Files.Select(DirectoryFileOutcomeResponse.From).ToArray());
 }
+
+public sealed record VectorIndexResponse(
+    string Name,
+    int? VectorSize,
+    string? Distance,
+    long? PointsCount,
+    string? Status,
+    bool? IsCompatible)
+{
+    public static VectorIndexResponse From(VectorIndexInfo info) => new(
+        info.Name, info.VectorSize, info.Distance, info.PointsCount, info.Status, info.IsCompatible);
+}
+
+public sealed record ListVectorIndexesResponse(IReadOnlyList<VectorIndexResponse> Indexes);

@@ -117,6 +117,57 @@ public sealed class QdrantVectorDocumentStore(
         return AppResult<IReadOnlyList<VectorSearchHit>>.Ok(results);
     }
 
+    public async Task<AppResult<IReadOnlyList<VectorIndexInfo>>> ListIndexesAsync(
+        bool includeDetails,
+        int expectedVectorSize,
+        CancellationToken ct)
+    {
+        using var response = await client.GetAsync("/collections", ct);
+        await EnsureSuccessAsync(response, ct);
+        using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+        var names = document.RootElement.GetProperty("result").GetProperty("collections")
+            .EnumerateArray()
+            .Select(c => c.GetProperty("name").GetString() ?? "")
+            .Where(n => n.Length > 0)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        if (!includeDetails)
+            return AppResult<IReadOnlyList<VectorIndexInfo>>.Ok(
+                names.Select(n => new VectorIndexInfo(n, null, null, null, null, null)).ToArray());
+
+        var details = new VectorIndexInfo?[names.Length];
+        await Parallel.ForEachAsync(
+            Enumerable.Range(0, names.Length),
+            new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = ct },
+            async (i, token) => details[i] = await ReadIndexInfoAsync(names[i], expectedVectorSize, token));
+        return AppResult<IReadOnlyList<VectorIndexInfo>>.Ok(details.Where(d => d is not null).Select(d => d!).ToArray());
+    }
+
+    private async Task<VectorIndexInfo?> ReadIndexInfoAsync(string name, int expectedVectorSize, CancellationToken ct)
+    {
+        using var response = await client.GetAsync($"/collections/{Uri.EscapeDataString(name)}", ct);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, ct);
+        using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+        var result = document.RootElement.GetProperty("result");
+        var status = result.TryGetProperty("status", out var s) && s.ValueKind == JsonValueKind.String ? s.GetString() : null;
+        long? points = result.TryGetProperty("points_count", out var pc) && pc.ValueKind == JsonValueKind.Number ? pc.GetInt64() : null;
+
+        int? size = null;
+        string? distance = null;
+        if (result.TryGetProperty("config", out var config) &&
+            config.TryGetProperty("params", out var prms) &&
+            prms.TryGetProperty("vectors", out var vectors) &&
+            vectors.ValueKind == JsonValueKind.Object)
+        {
+            if (vectors.TryGetProperty("size", out var sz) && sz.ValueKind == JsonValueKind.Number) size = sz.GetInt32();
+            if (vectors.TryGetProperty("distance", out var d) && d.ValueKind == JsonValueKind.String) distance = d.GetString();
+        }
+        var compatible = size == expectedVectorSize && string.Equals(distance, "Cosine", StringComparison.OrdinalIgnoreCase);
+        return new VectorIndexInfo(name, size, distance, points, status, compatible);
+    }
+
     private async Task EnsureCollectionAsync(string vectorIndexName, int vectorSize, CancellationToken ct)
     {
         using var response = await client.GetAsync($"/collections/{vectorIndexName}", ct);

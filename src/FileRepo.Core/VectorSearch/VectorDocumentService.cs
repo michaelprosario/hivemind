@@ -53,6 +53,11 @@ public sealed partial class VectorDocumentService(
         return await store.SearchAsync(query.VectorIndexName, vector, query.Take, ct);
     }
 
+    public Task<AppResult<IReadOnlyList<VectorIndexInfo>>> ListIndexesAsync(
+        ListVectorIndexesQuery query,
+        CancellationToken ct) =>
+        store.ListIndexesAsync(query.IncludeDetails, embeddingProvider.VectorSize, ct);
+
     private static List<ValidationError> ValidateIndex(string indexName)
     {
         var errors = new List<ValidationError>();

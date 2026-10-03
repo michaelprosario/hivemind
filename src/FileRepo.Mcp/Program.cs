@@ -1,4 +1,5 @@
 using FileRepo.Core.VectorSearch;
+using FileRepo.Mcp;
 using FileRepo.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -22,6 +23,9 @@ if (transport is not ("stdio" or "http"))
 if (transport == "http")
 {
     var builder = WebApplication.CreateBuilder(args);
+    var apiKey = McpApiKeyAuthenticationMiddleware.ValidateApiKey(
+        builder.Configuration["Mcp:ApiKey"]);
+    var httpPath = builder.Configuration["Mcp:HttpPath"] ?? "/mcp";
     ConfigureServices(builder.Services, builder.Configuration);
 
     builder.Services
@@ -30,7 +34,8 @@ if (transport == "http")
         .WithToolsFromAssembly();
 
     var app = builder.Build();
-    app.MapMcp(builder.Configuration["Mcp:HttpPath"] ?? "/mcp");
+    app.UseMiddleware<McpApiKeyAuthenticationMiddleware>(apiKey, new PathString(httpPath));
+    app.MapMcp(httpPath);
     await app.RunAsync();
 }
 else
