@@ -79,3 +79,13 @@ As a software engineer, I should be able to use the vector search operations of 
 As a claude user, I should be able to connect to my mcp server using FileRepo.Mcp remote HTTP transport
 - do not worry about auth yet
 - made changes so that mcp server supports remote HTTP transport
+
+
+===
+
+As a user, I should be able to use a CLI tool update my vector database
+- cli tool should enable me to ingest all documents from a folder into a vector db index
+- cli tool should enable me to ingest a single file into vector db index
+
+
+===

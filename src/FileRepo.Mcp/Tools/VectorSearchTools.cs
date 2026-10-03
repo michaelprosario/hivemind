@@ -23,42 +23,6 @@ public static class VectorSearchTools
     };
 
     [McpServerTool, Description(
-        "Indexes a single permitted local text file into the specified Qdrant vector index so its content " +
-        "becomes semantically searchable. The source path must resolve inside the server's configured " +
-        "VectorSearch:AllowedSourceRoot and have a supported extension.")]
-    public static async Task<string> IngestFile(
-        IVectorDocumentService vectorDocumentService,
-        [Description("Vector index (Qdrant collection) name, e.g. 'docs_v1'. Must match ^[a-z0-9][a-z0-9_-]{0,62}$.")]
-        string vectorIndexName,
-        [Description("Path to the source text file, absolute or relative to the allowed root.")]
-        string sourcePath,
-        CancellationToken cancellationToken = default)
-    {
-        var result = await vectorDocumentService.IngestAsync(
-            new(vectorIndexName, sourcePath), cancellationToken);
-        return ToJson(result);
-    }
-
-    [McpServerTool, Description(
-        "Indexes every supported file directly under a permitted local directory into the specified Qdrant " +
-        "vector index in one call. Reports each file as Ingested, Skipped (unsupported extension), or Failed, " +
-        "so one bad file never blocks the rest of the folder.")]
-    public static async Task<string> IngestDirectory(
-        IDirectoryIngestionService directoryIngestionService,
-        [Description("Vector index (Qdrant collection) name, e.g. 'docs_v1'.")]
-        string vectorIndexName,
-        [Description("Path to the source directory, absolute or relative to the allowed root.")]
-        string directoryPath,
-        [Description("Set true to also ingest files in subdirectories. Defaults to false.")]
-        bool includeSubdirectories = false,
-        CancellationToken cancellationToken = default)
-    {
-        var result = await directoryIngestionService.IngestDirectoryAsync(
-            new(vectorIndexName, directoryPath, includeSubdirectories), cancellationToken);
-        return ToJson(result);
-    }
-
-    [McpServerTool, Description(
         "Finds the most semantically similar indexed text chunks in the specified Qdrant vector index for a " +
         "natural-language query, returning each match's source file, location, and similarity score.")]
     public static async Task<string> Search(
