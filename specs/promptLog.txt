@@ -89,3 +89,20 @@ As a user, I should be able to use a CLI tool update my vector database
 
 
 ===
+
+Think about this requirement.
+
+As a user, I should be able to use mcp to list the collections/indexes of my qdrant instance.
+
+Draft a tech implemention plan in plan.md
+
+===
+
+Think about this requirement.
+
+As a mcp server user, I should be able to provide an api key in the header to securely access my data.
+- admin of mcp server can specify api key using environment variable or configuration
+- when I connect to my mcp server via http, I have to provide the api key
+
+Draft tech implemention plan in plan2.md
+

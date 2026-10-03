@@ -11,6 +11,10 @@ public interface IVectorDocumentService
     Task<AppResult<IReadOnlyList<VectorSearchHit>>> SearchAsync(
         SearchVectorDocumentsQuery query,
         CancellationToken ct);
+
+    Task<AppResult<IReadOnlyList<VectorIndexInfo>>> ListIndexesAsync(
+        ListVectorIndexesQuery query,
+        CancellationToken ct);
 }
 
 public interface IDirectoryIngestionService
@@ -63,5 +67,10 @@ public interface IVectorDocumentStore
         string vectorIndexName,
         ReadOnlyMemory<float> queryVector,
         int take,
+        CancellationToken ct);
+
+    Task<AppResult<IReadOnlyList<VectorIndexInfo>>> ListIndexesAsync(
+        bool includeDetails,
+        int expectedVectorSize,
         CancellationToken ct);
 }

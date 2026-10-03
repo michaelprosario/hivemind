@@ -59,7 +59,7 @@ A small, clean-architecture ASP.NET Core solution for three related jobs:
   to HTTP status codes uniformly.
 - **Swagger / OpenAPI** UI for exploring and trying every HTTP endpoint.
 - **MCP tools for the same vector search use cases**: `ingest_file`,
-  `ingest_directory`, and `search` are exposed over stdio or Streamable HTTP via
+  `ingest_directory`, `search`, and `list_indexes` are exposed over stdio or Streamable HTTP via
   `FileRepo.Mcp`, so an MCP-compatible AI client can ingest and search the
   shared knowledge base as naturally as a human calling the REST API.
 - **CLI for updating the vector database**: `FileRepo.Cli` provides

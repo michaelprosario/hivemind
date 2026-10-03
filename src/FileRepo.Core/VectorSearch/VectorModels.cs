@@ -67,3 +67,13 @@ public sealed class VectorSearchValidationRules
     public int ChunkOverlapCharacters { get; init; } = 240;
     public int MaxQueryLength { get; init; } = 8_000;
 }
+
+public sealed record ListVectorIndexesQuery(bool IncludeDetails = true);
+
+public sealed record VectorIndexInfo(
+    string Name,
+    int? VectorSize,
+    string? Distance,
+    long? PointsCount,
+    string? Status,
+    bool? IsCompatible);
