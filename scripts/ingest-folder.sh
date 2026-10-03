@@ -1,0 +1,1 @@
+dotnet run --project src/FileRepo.Cli -- ingest-directory --index test1 --path /workspaces/hivemind/src/FileRepo.Web/data/files

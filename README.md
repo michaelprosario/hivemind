@@ -326,8 +326,6 @@ machine as-is.
 
 | Tool | Maps to | Description |
 |---|---|---|
-| `ingest_file` | `IVectorDocumentService.IngestAsync` | Indexes a single permitted local text file into a named vector index. |
-| `ingest_directory` | `IDirectoryIngestionService.IngestDirectoryAsync` | Indexes every supported file under a permitted local directory (optionally recursive) into a named vector index, reporting each file as `Ingested`, `Skipped`, or `Failed`. |
 | `search` | `IVectorDocumentService.SearchAsync` | Finds the top-`N` semantically similar chunks in a named vector index for a natural-language query. |
 
 Each tool returns a JSON string: `{"success":true,"data":{...}}` on success,
