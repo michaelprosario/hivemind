@@ -15,6 +15,18 @@ public interface IVectorDocumentService
     Task<AppResult<IReadOnlyList<VectorIndexInfo>>> ListIndexesAsync(
         ListVectorIndexesQuery query,
         CancellationToken ct);
+
+    Task<AppResult<VectorIndexSchema>> InspectIndexSchemaAsync(
+        InspectVectorIndexSchemaQuery query,
+        CancellationToken ct);
+
+    Task<AppResult<VectorIndexInfo>> CreateIndexAsync(
+        CreateVectorIndexCommand command,
+        CancellationToken ct);
+
+    Task<AppResult<StoredMemory>> StoreMemoryAsync(
+        StoreMemoryCommand command,
+        CancellationToken ct);
 }
 
 public interface IDirectoryIngestionService
@@ -72,5 +84,23 @@ public interface IVectorDocumentStore
     Task<AppResult<IReadOnlyList<VectorIndexInfo>>> ListIndexesAsync(
         bool includeDetails,
         int expectedVectorSize,
+        CancellationToken ct);
+
+    Task<AppResult<VectorIndexSchema>> InspectIndexSchemaAsync(
+        string collectionName,
+        CancellationToken ct);
+
+    Task<AppResult<VectorIndexInfo>> CreateIndexAsync(
+        string name,
+        int vectorSize,
+        CancellationToken ct);
+
+    Task<AppResult<StoredMemory>> StoreMemoryAsync(
+        string vectorIndexName,
+        MemoryRecord memory,
+        IReadOnlyList<VectorChunk> chunks,
+        IReadOnlyList<ReadOnlyMemory<float>> vectors,
+        int vectorSize,
+        string modelRevision,
         CancellationToken ct);
 }

@@ -43,6 +43,31 @@ public sealed record SearchVectorDocumentsQuery(
     string QueryText,
     int Take = 5);
 
+public sealed record StoreMemoryCommand(
+    string VectorIndexName,
+    string Text,
+    string? Key,
+    IReadOnlyList<string>? Tags,
+    string? Author,
+    string? SourceUrl);
+
+public sealed record StoredMemory(
+    string VectorIndexName,
+    string Key,
+    string ContentHash,
+    int ChunkCount,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+/// <summary>Normalized, validated memory metadata passed from the Core service down to the store port.</summary>
+public sealed record MemoryRecord(
+    string Key,
+    bool IsCallerSuppliedKey,
+    string ContentHash,
+    IReadOnlyList<string> Tags,
+    string? Author,
+    string? SourceUrl);
+
 public sealed record IngestedVectorDocument(
     string VectorIndexName,
     string SourceName,
@@ -59,13 +84,22 @@ public sealed record VectorSearchHit(
     int StartCharacter,
     int EndCharacter,
     string Text,
-    float Score);
+    float Score,
+    string Kind = "file",
+    string? Key = null,
+    IReadOnlyList<string>? Tags = null,
+    string? Author = null,
+    string? SourceUrl = null);
 
 public sealed class VectorSearchValidationRules
 {
     public int ChunkSizeCharacters { get; init; } = 1_600;
     public int ChunkOverlapCharacters { get; init; } = 240;
     public int MaxQueryLength { get; init; } = 8_000;
+    public int MaxMemoryTextLength { get; init; } = 200_000;
+    public int MaxTagCount { get; init; } = 32;
+    public int MaxTagLength { get; init; } = 64;
+    public int MaxAuthorLength { get; init; } = 256;
 }
 
 public sealed record ListVectorIndexesQuery(bool IncludeDetails = true);
@@ -77,3 +111,20 @@ public sealed record VectorIndexInfo(
     long? PointsCount,
     string? Status,
     bool? IsCompatible);
+
+public sealed record InspectVectorIndexSchemaQuery(string CollectionName);
+
+public sealed record VectorPayloadField(
+    string Name,
+    string? DataType,
+    long? PointsIndexed);
+
+public sealed record VectorIndexSchema(
+    string Name,
+    IReadOnlyList<VectorPayloadField> PayloadSchema,
+    IReadOnlyList<string> IndexedFields,
+    long? PointsCount,
+    long? VectorCount,
+    string? Status);
+
+public sealed record CreateVectorIndexCommand(string Name);

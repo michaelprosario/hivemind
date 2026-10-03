@@ -106,3 +106,31 @@ As a mcp server user, I should be able to provide an api key in the header to se
 
 Draft tech implemention plan in plan2.md
 
+====
+Think about requirement.
+
+As an ai agent, I should be able to store data into a named index.
+
+Input: text, metadata (tags, timestamps, author, source URL), optional key/id
+Purpose: Stores unstructured data, code snippets, user preferences, or task progress.
+
+Document in plan.md
+
+=== 
+
+Think about the following requirements.
+
+inspect_index_schema
+
+Input: collection_name
+Output: Payload schema, indexed fields, total point count, vector count.
+Purpose: Helps the LLM write accurate payload filters (e.g., knowing whether the field is status: "open" or is_open: true).
+
+====
+
+create_collection
+
+Input: name, distance_metric(Cosine)
+Purpose: Spins up task-specific indexes on the fly
+
+Document in plan.md

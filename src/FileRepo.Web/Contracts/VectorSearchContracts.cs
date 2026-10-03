@@ -8,6 +8,13 @@ public sealed record IngestVectorDocumentDirectoryRequest(
     string DirectoryPath,
     bool IncludeSubdirectories = false);
 public sealed record SearchVectorDocumentsRequest(string VectorIndexName, string QueryText, int Take = 5);
+public sealed record StoreMemoryRequest(
+    string VectorIndexName,
+    string Text,
+    string? Key = null,
+    IReadOnlyList<string>? Tags = null,
+    string? Author = null,
+    string? SourceUrl = null);
 
 public sealed record IngestVectorDocumentResponse(
     string VectorIndexName,
@@ -30,11 +37,16 @@ public sealed record VectorSearchHitResponse(
     int StartCharacter,
     int EndCharacter,
     string Text,
-    float Score)
+    float Score,
+    string Kind,
+    string? Key,
+    IReadOnlyList<string>? Tags,
+    string? Author,
+    string? SourceUrl)
 {
     public static VectorSearchHitResponse From(VectorSearchHit hit) => new(
         hit.VectorIndexName, hit.SourceName, hit.CanonicalSourcePath, hit.ChunkIndex,
-        hit.StartCharacter, hit.EndCharacter, hit.Text, hit.Score);
+        hit.StartCharacter, hit.EndCharacter, hit.Text, hit.Score, hit.Kind, hit.Key, hit.Tags, hit.Author, hit.SourceUrl);
 }
 
 public sealed record SearchVectorDocumentsResponse(IReadOnlyList<VectorSearchHitResponse> Results);
@@ -84,3 +96,15 @@ public sealed record VectorIndexResponse(
 }
 
 public sealed record ListVectorIndexesResponse(IReadOnlyList<VectorIndexResponse> Indexes);
+
+public sealed record StoreMemoryResponse(
+    string VectorIndexName,
+    string Key,
+    string ContentHash,
+    int ChunkCount,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt)
+{
+    public static StoreMemoryResponse From(StoredMemory memory) => new(
+        memory.VectorIndexName, memory.Key, memory.ContentHash, memory.ChunkCount, memory.CreatedAt, memory.UpdatedAt);
+}

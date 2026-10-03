@@ -45,4 +45,13 @@ public sealed class VectorDocumentsController(
         return result.ToActionResult(this,
             hits => Ok(new SearchVectorDocumentsResponse(hits.Select(VectorSearchHitResponse.From).ToArray())));
     }
+
+    /// <summary>Stores text as agent memory (notes, code snippets, preferences, task progress) in the specified vector index.</summary>
+    [HttpPost("store-memory"), ProducesResponseType(typeof(StoreMemoryResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> StoreMemory(StoreMemoryRequest request, CancellationToken ct)
+    {
+        var result = await service.StoreMemoryAsync(
+            new(request.VectorIndexName, request.Text, request.Key, request.Tags, request.Author, request.SourceUrl), ct);
+        return result.ToActionResult(this, value => Ok(StoreMemoryResponse.From(value)));
+    }
 }
