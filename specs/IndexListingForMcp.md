@@ -4,8 +4,8 @@
 As a user, I can call an MCP tool to list the collections ("vector indexes") in my Qdrant instance.
 
 ## Current state
-- MCP tools live in `src/FileRepo.Mcp/Tools/VectorSearchTools.cs` (static class, `[McpServerTool]`, delegates to Core services, returns JSON via `ToJson(AppResult<T>)`). Only `Search` and ingest-style tools exist; there is no discovery tool, so users must already know index names.
-- Core: `IVectorDocumentService` / `VectorDocumentService` (validation + orchestration) and `IVectorDocumentStore` (port) in `src/FileRepo.Core/VectorSearch/Interfaces.cs`.
+- MCP tools live in `src/HiveMind.Mcp/Tools/VectorSearchTools.cs` (static class, `[McpServerTool]`, delegates to Core services, returns JSON via `ToJson(AppResult<T>)`). Only `Search` and ingest-style tools exist; there is no discovery tool, so users must already know index names.
+- Core: `IVectorDocumentService` / `VectorDocumentService` (validation + orchestration) and `IVectorDocumentStore` (port) in `src/HiveMind.Core/VectorSearch/Interfaces.cs`.
 - Infrastructure: `QdrantVectorDocumentStore` talks to Qdrant REST through a typed `HttpClient` (base address/API key from `VectorSearchOptions`).
 - Web API exposes the same use cases in `VectorDocumentsController` (optional parity).
 
@@ -22,7 +22,7 @@ Names only are returned there; optional enrichment per collection uses `GET /col
 
 ## Changes
 
-### 1. Core (`src/FileRepo.Core/VectorSearch`)
+### 1. Core (`src/HiveMind.Core/VectorSearch`)
 - `VectorModels.cs`: add
   `record VectorIndexInfo(string Name, int? VectorSize, string? Distance, long? PointsCount, string? Status, bool? IsCompatible);`
 - `Queries.cs`/models: add `record ListVectorIndexesQuery(bool IncludeDetails = true);`
@@ -49,7 +49,7 @@ public static async Task<string> ListIndexes(
 Tool name surfaces as `list_indexes` (follow the SDK's naming convention used by `Search`). Update the `Search` description to mention discovering names with `list_indexes`.
 
 ### 4. Web API (optional parity)
-`GET /api/vector-indexes?includeDetails=true` in `VectorDocumentsController`, with contract in `VectorSearchContracts.cs`; add sample to `FileRepo.Web.http`.
+`GET /api/vector-indexes?includeDetails=true` in `VectorDocumentsController`, with contract in `VectorSearchContracts.cs`; add sample to `HiveMind.Web.http`.
 
 ### 5. Docs
 README: add the tool to the MCP tools list with example request/response.
@@ -62,7 +62,7 @@ README: add the tool to the MCP tools list with example request/response.
 ```
 
 ## Testing
-- Unit (`tests/FileRepo.Core.UnitTests`): service passes expected vector size, sorts results, propagates store failures (fake `IVectorDocumentStore`).
+- Unit (`tests/HiveMind.Core.UnitTests`): service passes expected vector size, sorts results, propagates store failures (fake `IVectorDocumentStore`).
 - Infrastructure: `QdrantVectorDocumentStore` with a stub `HttpMessageHandler`: empty list, multiple collections, 404 on detail, non-success status, named-vector config.
 - Manual/integration: `docker-compose/qdrant` up, ingest a folder via `scripts/ingest-folder.sh`, run `scripts/start-mcp-http.sh`, call `list_indexes` with an MCP client (e.g. MCP Inspector); verify against `curl localhost:6333/collections`.
 

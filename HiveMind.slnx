@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/HiveMind.Core/HiveMind.Core.csproj" />
+    <Project Path="src/HiveMind.Infrastructure/HiveMind.Infrastructure.csproj" />
+    <Project Path="src/HiveMind.Web/HiveMind.Web.csproj" />
+    <Project Path="src/HiveMind.Mcp/HiveMind.Mcp.csproj" />
+    <Project Path="src/HiveMind.Cli/HiveMind.Cli.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/HiveMind.Core.UnitTests/HiveMind.Core.UnitTests.csproj" />
+    <Project Path="tests/HiveMind.Infrastructure.Tests/HiveMind.Infrastructure.Tests.csproj" />
+    <Project Path="tests/HiveMind.Web.IntegrationTests/HiveMind.Web.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

@@ -12,7 +12,7 @@ server's tools and data.
 
 ## Current state
 
-- `src/FileRepo.Mcp/Program.cs` hosts either stdio or stateless Streamable HTTP
+- `src/HiveMind.Mcp/Program.cs` hosts either stdio or stateless Streamable HTTP
   based on `Mcp:Transport`; stdio is the default.
 - HTTP MCP is mapped at `Mcp:HttpPath` (default `/mcp`) with no authentication
   middleware or authorization policy.
@@ -21,7 +21,7 @@ server's tools and data.
   access to the server's configured data.
 - `scripts/start-mcp-http.sh` binds to `0.0.0.0` by default and sets the
   transport to HTTP. It currently has no authentication configuration.
-- `FileRepo.Mcp/appsettings.json` is tracked and contains non-secret server
+- `HiveMind.Mcp/appsettings.json` is tracked and contains non-secret server
   settings. It must not receive a real API key.
 
 ## Design decisions
@@ -32,7 +32,7 @@ server's tools and data.
 | Credential | One shared, administrator-managed secret for this server instance. It grants the same MCP tool access to every holder; it does not identify individual users. |
 | Configuration | Read `Mcp:ApiKey` through the normal .NET configuration system. Environment variable form: `Mcp__ApiKey`. Other providers, such as deployment secret stores or .NET user secrets, can supply the same setting. Do not check a real key into source control or log it. |
 | Missing configuration | Fail startup when `Mcp:Transport` is `http` and the key is unset, empty, or whitespace. Do not silently run an unauthenticated HTTP server. The stdio transport does not require this setting. |
-| Authentication boundary | Protect every HTTP method/request under the configured MCP path, including initialization, tool calls, notifications, and Streamable HTTP GET/SSE requests. Leave stdio and the separate `FileRepo.Web` REST API unchanged. |
+| Authentication boundary | Protect every HTTP method/request under the configured MCP path, including initialization, tool calls, notifications, and Streamable HTTP GET/SSE requests. Leave stdio and the separate `HiveMind.Web` REST API unchanged. |
 | Failure response | Missing, duplicated, empty, or incorrect header returns HTTP `401 Unauthorized` before MCP handling. Do not reveal the configured key or whether a supplied key was close to correct. |
 | Transport security | Require HTTPS for non-loopback/network deployments, normally terminated by a trusted reverse proxy. A static API key sent over plain HTTP is not secure in transit. |
 | Scope limits | No per-user accounts, roles, OAuth, key persistence, rate limiting, or automatic rotation in this change. Rotate by updating the configured secret and restarting/redeploying. |
@@ -64,7 +64,7 @@ facility rather than a committed settings file or command-line argument.
 ### 2. HTTP request authentication
 
 - Add a small middleware or endpoint filter in the HTTP branch of
-  `src/FileRepo.Mcp/Program.cs`, before `MapMcp` handles requests.
+  `src/HiveMind.Mcp/Program.cs`, before `MapMcp` handles requests.
 - Scope protection to the configured `Mcp:HttpPath` and its path descendants;
   do not accidentally authenticate unrelated middleware endpoints or apply
   this logic to stdio.
@@ -91,7 +91,7 @@ facility rather than a committed settings file or command-line argument.
   - a client configuration example for clients that support custom headers;
   - the requirement to use HTTPS when connecting across a network;
   - the fact that stdio is unaffected.
-- Do not put a usable key in `src/FileRepo.Mcp/appsettings.json` or any
+- Do not put a usable key in `src/HiveMind.Mcp/appsettings.json` or any
   checked-in example.
 
 ### 4. Tests

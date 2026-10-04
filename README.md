@@ -22,7 +22,7 @@ A small, clean-architecture ASP.NET Core solution for three related jobs:
 - **A case study for building an MCP server.** This project is built with a
   small, well-tested Core layer (`IFileService`, `IVectorDocumentService`,
   `IDirectoryIngestionService`) sitting behind two thin, interchangeable front
-  ends: an HTTP API (`FileRepo.Web`) and an MCP server (`FileRepo.Mcp`). Both
+  ends: an HTTP API (`HiveMind.Web`) and an MCP server (`HiveMind.Mcp`). Both
   front ends call the exact same Core services, so ingestion and search
   behavior is identical whether the caller is `curl`, Swagger UI, or an AI
   agent talking MCP — no business logic is duplicated between them. See
@@ -61,11 +61,11 @@ A small, clean-architecture ASP.NET Core solution for three related jobs:
 - **MCP tools for the same vector search use cases**: `ingest_file`,
   `ingest_directory`, `search`, `list_indexes`, `inspect_index_schema`,
   `create_index`, and `store_memory` are exposed over stdio or Streamable HTTP
-  via `FileRepo.Mcp`, so an MCP-compatible AI client can inspect payload fields,
+  via `HiveMind.Mcp`, so an MCP-compatible AI client can inspect payload fields,
   create task-specific indexes, ingest, search, and store its own memories
   (notes, code snippets, preferences, task progress) in the shared knowledge
   base as naturally as a human calling the REST API.
-- **CLI for updating the vector database**: `FileRepo.Cli` provides
+- **CLI for updating the vector database**: `HiveMind.Cli` provides
   `ingest-file` and `ingest-directory` commands for scripting or ad hoc
   ingestion straight from a terminal, using the same Core services as the
   Web API and MCP server.
@@ -84,23 +84,23 @@ flowchart TB
         Agent[Claude Desktop or other MCP client]
     end
 
-    subgraph Web["FileRepo.Web (ASP.NET Core Web API)"]
+    subgraph Web["HiveMind.Web (ASP.NET Core Web API)"]
         FC[FilesController]
         VC[VectorDocumentsController]
     end
 
-    subgraph Mcp["FileRepo.Mcp (MCP server, stdio or HTTP transport)"]
+    subgraph Mcp["HiveMind.Mcp (MCP server, stdio or HTTP transport)"]
         VST[VectorSearchTools\ningest_file / ingest_directory / search]
     end
 
-    subgraph Core["FileRepo.Core (business logic, zero framework deps)"]
+    subgraph Core["HiveMind.Core (business logic, zero framework deps)"]
         FS[IFileService]
         VDS[IVectorDocumentService]
         DIS[IDirectoryIngestionService]
         TC[ITextChunker]
     end
 
-    subgraph Infra["FileRepo.Infrastructure (adapters)"]
+    subgraph Infra["HiveMind.Infrastructure (adapters)"]
         FR[FileSystemFileRepository]
         STR[FileSystemSourceTextReader]
         DFE[FileSystemDirectoryEnumerator]
@@ -151,7 +151,7 @@ flowchart TB
 | `ITextChunker` / `TextChunker` | Core | Splits text into overlapping character-offset chunks for embedding. |
 | `ITextEmbeddingProvider` / `OnnxTextEmbeddingProvider` | Infrastructure | Tokenizes text and runs the local ONNX model to produce normalized embedding vectors. |
 | `IVectorDocumentStore` / `QdrantVectorDocumentStore` | Infrastructure | Creates/validates Qdrant collections, upserts and activates new versions, retires old versions, and runs similarity search. |
-| `VectorSearchTools` (`FileRepo.Mcp`) | Web (MCP front end) | Static `[McpServerTool]` methods (`search`, `list_indexes`, `inspect_index_schema`, `create_index`, `store_memory`) that call straight into `IVectorDocumentService` / `IDirectoryIngestionService` and serialize the `AppResult` as JSON for the calling MCP client. |
+| `VectorSearchTools` (`HiveMind.Mcp`) | Web (MCP front end) | Static `[McpServerTool]` methods (`search`, `list_indexes`, `inspect_index_schema`, `create_index`, `store_memory`) that call straight into `IVectorDocumentService` / `IDirectoryIngestionService` and serialize the `AppResult` as JSON for the calling MCP client. |
 
 ## Getting started
 
@@ -175,7 +175,7 @@ hf download Xenova/bge-small-en-v1.5 --local-dir ./models/bge-small-en-v1.5-onnx
 
 The `VectorSearch:ModelDirectory` setting must point at the folder containing
 `model.onnx` and `vocab.txt` (defaults to
-`./models/bge-small-en-v1.5-onnx/onnx` relative to `src/FileRepo.Web`).
+`./models/bge-small-en-v1.5-onnx/onnx` relative to `src/HiveMind.Web`).
 
 ### 3. Start local Qdrant
 
@@ -189,7 +189,7 @@ Qdrant's REST/Web UI is on `http://localhost:6333` and gRPC is on `6334`.
 ### 4. Run the API
 
 ```bash
-dotnet run --project src/FileRepo.Web
+dotnet run --project src/HiveMind.Web
 ```
 
 Swagger UI is available at `/swagger` (enabled by default in Development, or
@@ -338,7 +338,7 @@ Response:
 
 ## MCP server
 
-`FileRepo.Mcp` exposes the vector search use cases as [Model Context
+`HiveMind.Mcp` exposes the vector search use cases as [Model Context
 Protocol](https://modelcontextprotocol.io) tools over **stdio** or the
 Streamable **HTTP** transport, built with the official
 [MCP C# SDK](https://www.nuget.org/packages/ModelContextProtocol) following
@@ -375,8 +375,8 @@ The default transport is stdio, so it's normally launched by an MCP client
 rather than run interactively. To confirm it starts correctly:
 
 ```bash
-dotnet build src/FileRepo.Mcp/FileRepo.Mcp.csproj
-dotnet run --project src/FileRepo.Mcp
+dotnet build src/HiveMind.Mcp/HiveMind.Mcp.csproj
+dotnet run --project src/HiveMind.Mcp
 ```
 
 It will sit waiting for JSON-RPC messages on stdin; press `Ctrl+C` to stop it.
@@ -384,9 +384,9 @@ Make sure Qdrant is running and the embedding model is downloaded first (see
 [Getting started](#getting-started)) — the tools call the same
 `VectorSearch` configuration described below.
 
-By default, `src/FileRepo.Mcp/appsettings.json` points its
+By default, `src/HiveMind.Mcp/appsettings.json` points its
 `VectorSearch:AllowedSourceRoot`, `ModelDirectory`, and `CatalogPath` at the
-sibling `FileRepo.Web` project's `data/` and `models/` folders, so both the
+sibling `HiveMind.Web` project's `data/` and `models/` folders, so both the
 Web API and the MCP server read and write the **same** files, index, and
 catalog. Override any of these with environment variables (for example
 `VectorSearch__AllowedSourceRoot`) if you want the MCP server to point
@@ -451,7 +451,7 @@ line argument.
    launch:
 
    ```bash
-   dotnet build src/FileRepo.Mcp/FileRepo.Mcp.csproj
+   dotnet build src/HiveMind.Mcp/HiveMind.Mcp.csproj
    ```
 
 2. Open Claude Desktop → **Settings → Developer → Edit Config**. This opens
@@ -460,7 +460,7 @@ line argument.
    - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 3. Add an entry under `mcpServers` that runs the project with `dotnet run`,
-   using the **absolute path** to `FileRepo.Mcp.csproj` on your machine:
+   using the **absolute path** to `HiveMind.Mcp.csproj` on your machine:
 
    ```json
    {
@@ -470,7 +470,7 @@ line argument.
          "args": [
            "run",
            "--project",
-           "/absolute/path/to/hivemind/src/FileRepo.Mcp/FileRepo.Mcp.csproj"
+           "/absolute/path/to/hivemind/src/HiveMind.Mcp/HiveMind.Mcp.csproj"
          ]
        }
      }
@@ -478,7 +478,7 @@ line argument.
    ```
 
    On Windows, use a Windows-style absolute path (e.g.
-   `"D:\\source\\hivemind\\src\\FileRepo.Mcp\\FileRepo.Mcp.csproj"`).
+   `"D:\\source\\hivemind\\src\\HiveMind.Mcp\\HiveMind.Mcp.csproj"`).
 
 4. Make sure Qdrant is running (`docker compose -f docker-compose/qdrant/docker-compose.yaml up -d`)
    and the embedding model has been downloaded, since Claude Desktop starts
@@ -506,7 +506,7 @@ mode**.
    launch:
 
    ```bash
-   dotnet build src/FileRepo.Mcp/FileRepo.Mcp.csproj
+   dotnet build src/HiveMind.Mcp/HiveMind.Mcp.csproj
    ```
 
 2. In the repository root, create (or open) `.vscode/mcp.json` and add a
@@ -522,7 +522,7 @@ mode**.
          "args": [
            "run",
            "--project",
-           "${workspaceFolder}/src/FileRepo.Mcp/FileRepo.Mcp.csproj"
+           "${workspaceFolder}/src/HiveMind.Mcp/HiveMind.Mcp.csproj"
          ]
        }
      }
@@ -531,7 +531,7 @@ mode**.
 
    Alternatively, run **Command Palette → MCP: Add Server…** and choose
    **Command (stdio)**, supplying `dotnet` as the command and
-   `run --project ${workspaceFolder}/src/FileRepo.Mcp/FileRepo.Mcp.csproj` as
+   `run --project ${workspaceFolder}/src/HiveMind.Mcp/HiveMind.Mcp.csproj` as
    the arguments; VS Code will write the same `.vscode/mcp.json` for you.
 
 3. Make sure Qdrant is running
@@ -555,9 +555,9 @@ mode**.
 
 ## CLI tool
 
-`FileRepo.Cli` is a small standalone console app for ingesting content into
+`HiveMind.Cli` is a small standalone console app for ingesting content into
 the vector database from the command line, without going through the HTTP
-API or an MCP client. Like `FileRepo.Mcp`, it's a thin host that calls the
+API or an MCP client. Like `HiveMind.Mcp`, it's a thin host that calls the
 same `IVectorDocumentService` and `IDirectoryIngestionService` used
 everywhere else, so ingestion behaves identically no matter which front end
 started it.
@@ -566,16 +566,16 @@ Build it once, then invoke the compiled executable (or use `dotnet run` in
 development):
 
 ```bash
-dotnet build src/FileRepo.Cli/FileRepo.Cli.csproj
+dotnet build src/HiveMind.Cli/HiveMind.Cli.csproj
 
 # Ingest a single file
-dotnet run --project src/FileRepo.Cli -- ingest-file --index docs_v1 --path ./data/files/notes.md
+dotnet run --project src/HiveMind.Cli -- ingest-file --index docs_v1 --path ./data/files/notes.md
 
 # Ingest every supported file directly under a folder
-dotnet run --project src/FileRepo.Cli -- ingest-directory --index docs_v1 --path ./data/files
+dotnet run --project src/HiveMind.Cli -- ingest-directory --index docs_v1 --path ./data/files
 
 # ...including subdirectories
-dotnet run --project src/FileRepo.Cli -- ingest-directory --index docs_v1 --path ./data/files --recursive
+dotnet run --project src/HiveMind.Cli -- ingest-directory --index docs_v1 --path ./data/files --recursive
 ```
 
 | Command | Maps to | Description |
@@ -588,20 +588,20 @@ Both commands require `--index` (`-i`, the Qdrant collection name) and
 `AppResult` as JSON to stdout — `{"success":true,"data":{...}}` on success,
 or `{"success":false,"status":"Invalid","messages":[...],"validationErrors":[...]}`
 on failure — with a non-zero exit code on failure so it's easy to script.
-Run `dotnet run --project src/FileRepo.Cli -- --help` for the full usage.
+Run `dotnet run --project src/HiveMind.Cli -- --help` for the full usage.
 
 Make sure Qdrant is running and the embedding model is downloaded first (see
-[Getting started](#getting-started)). `src/FileRepo.Cli/appsettings.json`
-has its own `VectorSearch` section, defaulted (like `FileRepo.Mcp`) to point
-at the sibling `FileRepo.Web` project's `data/` and `models/` folders via
-relative `../FileRepo.Web/...` paths, so all three processes share the same
+[Getting started](#getting-started)). `src/HiveMind.Cli/appsettings.json`
+has its own `VectorSearch` section, defaulted (like `HiveMind.Mcp`) to point
+at the sibling `HiveMind.Web` project's `data/` and `models/` folders via
+relative `../HiveMind.Web/...` paths, so all three processes share the same
 allowed root, model, and catalog. Override it with `Section__Key`
 environment variables, or by appending extra arguments (for example
 `--VectorSearch:QdrantEndpoint http://localhost:6333`).
 
 ## Configuration
 
-All settings live in `src/FileRepo.Web/appsettings.json` and can be
+All settings live in `src/HiveMind.Web/appsettings.json` and can be
 overridden with environment variables using the `Section__Key` convention
 (for example `VectorSearch__QdrantApiKey`).
 
@@ -623,9 +623,9 @@ overridden with environment variables using the `Section__Key` convention
 | `VectorSearch` | `QdrantApiKey` | `local-development-secret` | API key sent to Qdrant; must match `QDRANT_API_KEY` used to start the container. |
 | `Swagger` | `Enabled` | `true` | Enables Swagger UI outside the Development environment. |
 
-`src/FileRepo.Mcp/appsettings.json` has its own `VectorSearch` section with
-the same keys, defaulted to point at `FileRepo.Web`'s `data/` and `models/`
-folders (via relative `../FileRepo.Web/...` paths) so both processes share
+`src/HiveMind.Mcp/appsettings.json` has its own `VectorSearch` section with
+the same keys, defaulted to point at `HiveMind.Web`'s `data/` and `models/`
+folders (via relative `../HiveMind.Web/...` paths) so both processes share
 the same allowed root, model, and catalog. Override it the same way, with
 `Section__Key` environment variables scoped to that process.
 
@@ -634,13 +634,13 @@ the same allowed root, model, and catalog. Override it the same way, with
 ### Run the Web API
 
 ```bash
-dotnet run --project src/FileRepo.Web
+dotnet run --project src/HiveMind.Web
 ```
 
 Or, for auto-restart on file changes:
 
 ```bash
-dotnet watch run --project src/FileRepo.Web
+dotnet watch run --project src/HiveMind.Web
 ```
 
 Swagger UI is at `http://localhost:5000/swagger` (or the port shown in the
@@ -649,7 +649,7 @@ console). Files are stored under `./data/files` by default.
 ### Run the MCP server
 
 ```bash
-dotnet run --project src/FileRepo.Mcp
+dotnet run --project src/HiveMind.Mcp
 ```
 
 This talks JSON-RPC over stdio, so it's meant to be launched by an MCP
@@ -659,8 +659,8 @@ than driven directly from a terminal.
 ### Run the CLI
 
 ```bash
-dotnet run --project src/FileRepo.Cli -- ingest-file --index test1 --path ./data/files/notes.md
-dotnet run --project src/FileRepo.Cli -- ingest-directory --index test1 --path ./data/files --recursive
+dotnet run --project src/HiveMind.Cli -- ingest-file --index test1 --path ./data/files/notes.md
+dotnet run --project src/HiveMind.Cli -- ingest-directory --index test1 --path ./data/files --recursive
 ```
 
 See [CLI tool](#cli-tool) above for the full command reference.
@@ -680,31 +680,31 @@ dotnet test FileRepository.slnx
 Run a single test project directly, for example while iterating on Core logic:
 
 ```bash
-dotnet test tests/FileRepo.Core.UnitTests/FileRepo.Core.UnitTests.csproj
-dotnet test tests/FileRepo.Infrastructure.Tests/FileRepo.Infrastructure.Tests.csproj
+dotnet test tests/HiveMind.Core.UnitTests/HiveMind.Core.UnitTests.csproj
+dotnet test tests/HiveMind.Infrastructure.Tests/HiveMind.Infrastructure.Tests.csproj
 ```
 
 Test projects and what they cover:
 
 | Project | Focus |
 |---|---|
-| `tests/FileRepo.Core.UnitTests` | Business logic in isolation — file service rules, vector document service validation/orchestration, directory ingestion outcome mapping, text chunking — using fakes/mocks (NSubstitute) for all Infrastructure dependencies. |
-| `tests/FileRepo.Infrastructure.Tests` | Concrete adapters against a real temp file system — file repository round-tripping, path traversal rejection, directory enumeration ordering/recursion/limits. |
-| `tests/FileRepo.Web.IntegrationTests` | End-to-end HTTP behavior through the ASP.NET Core test host. |
+| `tests/HiveMind.Core.UnitTests` | Business logic in isolation — file service rules, vector document service validation/orchestration, directory ingestion outcome mapping, text chunking — using fakes/mocks (NSubstitute) for all Infrastructure dependencies. |
+| `tests/HiveMind.Infrastructure.Tests` | Concrete adapters against a real temp file system — file repository round-tripping, path traversal rejection, directory enumeration ordering/recursion/limits. |
+| `tests/HiveMind.Web.IntegrationTests` | End-to-end HTTP behavior through the ASP.NET Core test host. |
 
 ### Project layout
 
 ```text
 src/
-  FileRepo.Core/            business logic, commands/queries, AppResult — no framework or I/O dependencies
-  FileRepo.Infrastructure/  file system, ONNX embedding, Qdrant adapters, DI composition
-  FileRepo.Web/             controllers, HTTP contracts, Program.cs startup
-  FileRepo.Mcp/             MCP server (stdio) exposing vector search tools, Program.cs startup
-  FileRepo.Cli/             console CLI for ingesting files/directories into the vector index, Program.cs startup
+  HiveMind.Core/            business logic, commands/queries, AppResult — no framework or I/O dependencies
+  HiveMind.Infrastructure/  file system, ONNX embedding, Qdrant adapters, DI composition
+  HiveMind.Web/             controllers, HTTP contracts, Program.cs startup
+  HiveMind.Mcp/             MCP server (stdio) exposing vector search tools, Program.cs startup
+  HiveMind.Cli/             console CLI for ingesting files/directories into the vector index, Program.cs startup
 tests/
-  FileRepo.Core.UnitTests/
-  FileRepo.Infrastructure.Tests/
-  FileRepo.Web.IntegrationTests/
+  HiveMind.Core.UnitTests/
+  HiveMind.Infrastructure.Tests/
+  HiveMind.Web.IntegrationTests/
 specs/                      design docs (cleanArchitecture.md, techPlanForVectorDb.md, ingestionAllTechSpec.md)
 docker-compose/qdrant/      local Qdrant container definition
 ```

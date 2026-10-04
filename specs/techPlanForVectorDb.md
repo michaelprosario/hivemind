@@ -55,15 +55,15 @@ and dependency composition.
 ### Dependency graph
 
 ```text
-FileRepo.Web
-    -> FileRepo.Core
-    -> FileRepo.Infrastructure (composition root and concrete adapters only)
+HiveMind.Web
+    -> HiveMind.Core
+    -> HiveMind.Infrastructure (composition root and concrete adapters only)
 
-FileRepo.Infrastructure -> FileRepo.Core
-FileRepo.Core           -> no project or NuGet dependency
+HiveMind.Infrastructure -> HiveMind.Core
+HiveMind.Core           -> no project or NuGet dependency
 ```
 
-`FileRepo.Core` must not reference Qdrant, ONNX Runtime, ASP.NET, or
+`HiveMind.Core` must not reference Qdrant, ONNX Runtime, ASP.NET, or
 `System.IO`. Its services accept one command or query object and return
 `AppResult` / `AppResult<T>`, consistent with the existing file use cases.
 
@@ -107,7 +107,7 @@ chunks. The controller does no chunking, embedding, or Qdrant work.
 
 ```text
 src/
-  FileRepo.Core/
+  HiveMind.Core/
     VectorSearch/
       Commands.cs
       Queries.cs
@@ -116,7 +116,7 @@ src/
       Interfaces.cs
       TextChunker.cs
       VectorDocumentService.cs
-  FileRepo.Infrastructure/
+  HiveMind.Infrastructure/
     VectorSearch/
       FileSystemSourceTextReader.cs
       OnnxTextEmbeddingProvider.cs
@@ -125,7 +125,7 @@ src/
       QdrantOptions.cs
       ModelAssetManager.cs
     DependencyInjection.cs
-  FileRepo.Web/
+  HiveMind.Web/
     Controllers/
       VectorDocumentsController.cs
     Contracts/
@@ -134,11 +134,11 @@ src/
     Program.cs
     appsettings.json
 tests/
-  FileRepo.Core.UnitTests/
+  HiveMind.Core.UnitTests/
     VectorSearch/
-  FileRepo.Infrastructure.Tests/
+  HiveMind.Infrastructure.Tests/
     VectorSearch/
-  FileRepo.Web.IntegrationTests/
+  HiveMind.Web.IntegrationTests/
     VectorSearch/
 docker-compose/
   qdrant/docker-compose.yaml
@@ -265,7 +265,7 @@ to the original file.
 
 - Required packages: `Microsoft.ML.OnnxRuntime` and a compatible local
   Hugging Face tokenizer package. Keep these package references exclusively in
-  `FileRepo.Infrastructure`.
+  `HiveMind.Infrastructure`.
 - `ModelAssetManager` explicitly downloads or verifies pinned model artifacts
   during an installation/bootstrap step, verifies a published SHA-256 checksum,
   and records the model revision. The running API fails startup validation with
@@ -452,7 +452,7 @@ Local startup:
 ```bash
 export QDRANT_API_KEY=local-development-secret
 docker compose -f docker-compose/qdrant/docker-compose.yaml up -d
-dotnet run --project src/FileRepo.Web
+dotnet run --project src/HiveMind.Web
 ```
 
 ## 9. Testing strategy
