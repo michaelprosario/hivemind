@@ -1,14 +1,12 @@
-# File Repository API
+# HiveMind API
 
 A small, clean-architecture ASP.NET Core solution for three related jobs:
 
-1. **File storage** — teams can add, update, delete, get, and list files on a
-   shared local folder through a simple HTTP API.
-2. **Vector search** — teams can ingest a single file or an entire folder of
+1. **Vector search** — teams can ingest a single file or an entire folder of
    files into a local [Qdrant](https://qdrant.tech/) vector index, using a
    free local embedding model, and then run semantic search over that shared
    knowledge from any client.
-3. **MCP server** — an AI assistant such as Claude Desktop can call the same
+2. **MCP server** — an AI assistant such as Claude Desktop can call the same
    ingest and search operations directly as [Model Context Protocol](https://modelcontextprotocol.io)
    tools, over stdio or the remote Streamable HTTP transport.
 
@@ -31,9 +29,6 @@ A small, clean-architecture ASP.NET Core solution for three related jobs:
 
 ## Key features
 
-- **File repository CRUD** over a configured local root folder: add, update,
-  delete, get, and list, all via POST endpoints for consistency and easy
-  scripting.
 - **Single-file semantic ingestion**: read a permitted local text file, chunk
   it, embed each chunk with a free local ONNX model, and upsert it into a
   named Qdrant collection.
@@ -53,13 +48,8 @@ A small, clean-architecture ASP.NET Core solution for three related jobs:
 - **Re-ingestion is idempotent by content**: re-ingesting an unchanged file is
   a no-op (matched by content hash); a changed file is atomically replaced
   (new version upserted and marked active before the old version is removed).
-- **Consistent result handling**: every Core service returns an `AppResult` /
-  `AppResult<T>` (success, validation errors, not-found, conflict, etc.)
-  instead of throwing for expected failures, so the Web layer maps outcomes
-  to HTTP status codes uniformly.
 - **Swagger / OpenAPI** UI for exploring and trying every HTTP endpoint.
-- **MCP tools for the same vector search use cases**: `ingest_file`,
-  `ingest_directory`, `search`, `list_indexes`, `inspect_index_schema`,
+- **MCP tools for the same vector search use cases**: `search`, `list_indexes`, `inspect_index_schema`,
   `create_index`, and `store_memory` are exposed over stdio or Streamable HTTP
   via `HiveMind.Mcp`, so an MCP-compatible AI client can inspect payload fields,
   create task-specific indexes, ingest, search, and store its own memories
@@ -196,19 +186,6 @@ Swagger UI is available at `/swagger` (enabled by default in Development, or
 via the `Swagger:Enabled` setting). Files are stored under
 `./data/files` by default.
 
-## File repository API
-
-Example upload:
-
-```bash
-curl -F file=@README.md http://localhost:5000/api/files/add
-curl -H 'Content-Type: application/json' -d '{"fileName":"README.md"}' \
-  http://localhost:5000/api/files/get -o downloaded.md
-curl -H 'Content-Type: application/json' -d '{"fileName":"README.md"}' \
-  http://localhost:5000/api/files/delete
-curl -H 'Content-Type: application/json' -d '{"namePrefix":"","skip":0,"take":50}' \
-  http://localhost:5000/api/files/list
-```
 
 ## Vector search
 
@@ -222,119 +199,7 @@ The source path (file or directory) must be beneath `VectorSearch:AllowedSourceR
 `vectorIndexName` is required on every request and must match
 `^[a-z0-9][a-z0-9_-]{0,62}$`; it maps one-to-one to a Qdrant collection.
 
-### Ingest a single file
 
-```bash
-curl -H 'Content-Type: application/json' \
-  -d '{"vectorIndexName":"docs_v1","sourcePath":"example.md"}' \
-  http://localhost:5000/api/vector-documents/ingest
-```
-
-Response:
-
-```json
-{
-  "vectorIndexName": "docs_v1",
-  "sourceName": "example.md",
-  "canonicalSourcePath": "/workspace/data/files/example.md",
-  "contentHash": "sha256:...",
-  "documentVersion": "01H...",
-  "chunkCount": 6
-}
-```
-
-### Ingest a whole folder
-
-Ingest every supported file directly under a folder in one request,
-optionally including subdirectories. Each file is reported as `Ingested`,
-`Skipped` (unsupported extension), or `Failed` (for example, oversized or
-unreadable), so a single bad file never blocks the rest of the batch:
-
-```bash
-curl -H 'Content-Type: application/json' \
-  -d '{"vectorIndexName":"docs_v1","directoryPath":"./data/files/docs","includeSubdirectories":true}' \
-  http://localhost:5000/api/vector-documents/ingest-directory
-```
-
-Response:
-
-```json
-{
-  "vectorIndexName": "docs_v1",
-  "directoryPath": "/workspace/data/files/docs",
-  "filesDiscovered": 3,
-  "ingestedCount": 2,
-  "skippedCount": 1,
-  "failedCount": 0,
-  "files": [
-    { "sourcePath": "...architecture.md", "status": "Ingested", "document": { "...": "..." }, "reason": null },
-    { "sourcePath": "...diagram.png", "status": "Skipped", "document": null, "reason": "Extension not supported." },
-    { "sourcePath": "...notes.md", "status": "Ingested", "document": { "...": "..." }, "reason": null }
-  ]
-}
-```
-
-Directory ingestion is capped by `VectorSearch:MaxFilesPerDirectoryIngest`
-(default 500) and uses the same allowed-root and supported-extension rules as
-single-file ingestion — no separate security boundary is introduced.
-
-### Search
-
-```bash
-curl -H 'Content-Type: application/json' \
-  -d '{"vectorIndexName":"docs_v1","queryText":"How do dependencies point inward?","take":3}' \
-  http://localhost:5000/api/vector-documents/search
-```
-
-Response:
-
-```json
-{
-  "results": [
-    {
-      "vectorIndexName": "docs_v1",
-      "sourceName": "cleanArchitecture.md",
-      "canonicalSourcePath": "/workspace/data/files/cleanArchitecture.md",
-      "chunkIndex": 2,
-      "startCharacter": 480,
-      "endCharacter": 1120,
-      "text": "Dependencies point inward towards the Core project...",
-      "score": 0.83,
-      "kind": "file",
-      "key": null,
-      "tags": null,
-      "author": null,
-      "sourceUrl": null
-    }
-  ]
-}
-```
-
-### Store memory
-
-Stores arbitrary text (not a file on disk) as agent memory — notes, code
-snippets, user preferences, or task progress — in a named vector index, with
-optional tags/author/source URL metadata. Omit `key` to always create a new
-memory, or pass the same `key` again to update an existing one in place.
-
-```bash
-curl -H 'Content-Type: application/json' \
-  -d '{"vectorIndexName":"agent_memory","text":"User prefers dark mode and metric units.","key":"user-prefs-123","tags":["preferences"],"author":"agent"}' \
-  http://localhost:5000/api/vector-documents/store-memory
-```
-
-Response:
-
-```json
-{
-  "vectorIndexName": "agent_memory",
-  "key": "user-prefs-123",
-  "contentHash": "sha256:...",
-  "chunkCount": 1,
-  "createdAt": "2026-01-01T00:00:00+00:00",
-  "updatedAt": "2026-01-01T00:00:00+00:00"
-}
-```
 
 ## MCP server
 
