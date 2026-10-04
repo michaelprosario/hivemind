@@ -68,17 +68,17 @@ and its contracts.
 ### Dependency graph
 
 ```text
-FileRepo.Web
-    -> FileRepo.Core
-    -> FileRepo.Infrastructure (composition root and concrete adapters only)
+HiveMind.Web
+    -> HiveMind.Core
+    -> HiveMind.Infrastructure (composition root and concrete adapters only)
 
-FileRepo.Infrastructure -> FileRepo.Core
-FileRepo.Core           -> no project or NuGet dependency
+HiveMind.Infrastructure -> HiveMind.Core
+HiveMind.Core           -> no project or NuGet dependency
 ```
 
-No new external package is required. `FileRepo.Core` continues to depend on
+No new external package is required. `HiveMind.Core` continues to depend on
 nothing but the BCL; the new directory enumerator lives in
-`FileRepo.Infrastructure` alongside `FileSystemSourceTextReader`, since only
+`HiveMind.Infrastructure` alongside `FileSystemSourceTextReader`, since only
 Infrastructure knows the allowed root and touches `System.IO`.
 
 ### Request flow
@@ -105,28 +105,28 @@ versioning, replace-by-source, validation) is defined in exactly one place.
 
 ```text
 src/
-  FileRepo.Core/
+  HiveMind.Core/
     VectorSearch/
       Commands.cs                     (add IngestVectorDocumentDirectoryCommand)
       VectorModels.cs                 (add IngestedVectorDirectory, DirectoryFileOutcome)
       Interfaces.cs                   (add IDirectoryIngestionService, IDirectoryFileEnumerator)
       DirectoryIngestionService.cs    (new)
-  FileRepo.Infrastructure/
+  HiveMind.Infrastructure/
     VectorSearch/
       FileSystemDirectoryEnumerator.cs (new)
       VectorSearchOptions.cs           (add MaxFilesPerDirectoryIngest)
     DependencyInjection.cs             (register new service/enumerator)
-  FileRepo.Web/
+  HiveMind.Web/
     Controllers/
       VectorDocumentsController.cs     (add ingest-directory endpoint)
     Contracts/
       Requests.cs / Responses.cs       (add directory request/response records)
 tests/
-  FileRepo.Core.UnitTests/
+  HiveMind.Core.UnitTests/
     VectorSearch/DirectoryIngestionServiceTests.cs
-  FileRepo.Infrastructure.Tests/
+  HiveMind.Infrastructure.Tests/
     VectorSearch/FileSystemDirectoryEnumeratorTests.cs
-  FileRepo.Web.IntegrationTests/
+  HiveMind.Web.IntegrationTests/
     VectorSearch/ (extend existing ingest tests with a directory case)
 ```
 
@@ -378,7 +378,7 @@ repeated calls to `/api/vector-documents/ingest`:
 ```bash
 export QDRANT_API_KEY=local-development-secret
 docker compose -f docker-compose/qdrant/docker-compose.yaml up -d
-dotnet run --project src/FileRepo.Web
+dotnet run --project src/HiveMind.Web
 curl -X POST http://localhost:5000/api/vector-documents/ingest-directory \
   -H "Content-Type: application/json" \
   -d '{"vectorIndexName":"engineering_docs_v1","directoryPath":"./data/files/engineering-docs","includeSubdirectories":true}'

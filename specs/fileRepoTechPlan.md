@@ -36,29 +36,29 @@ These rules come from the spec and drive the design below.
 | Spec rule | How this plan applies it |
 |---|---|
 | Dependencies point inward | `Core` references nothing. `Infrastructure` references `Core`. `Web` references `Core` and `Infrastructure`, the latter only for DI registration in the composition root. |
-| Core has minimal framework dependencies | `FileRepo.Core` has **zero NuGet packages**, no `Microsoft.Extensions.*`, and no FluentValidation. Validation is hand-written. |
+| Core has minimal framework dependencies | `HiveMind.Core` has **zero NuGet packages**, no `Microsoft.Extensions.*`, and no FluentValidation. Validation is hand-written. |
 | Inner defines interfaces, outer implements | `IFileRepository` lives in Core. `FileSystemFileRepository` lives in Infrastructure. |
 | Infra owns file system access | All `System.IO` calls against the repo folder are in Infrastructure. |
 | Web has no business logic | Controllers only bind requests, call `IFileService`, and map `AppResult` to HTTP. |
 | Core services depend on repositories/providers via interfaces | `FileService` takes `IFileRepository` and nothing concrete. |
 | Core services take command or query objects | Every `IFileService` method takes exactly one command or query record. |
 | Core services return an app result | Every `IFileService` method returns `AppResult` or `AppResult<T>` with status, messages, and validation errors. Expected failures never throw. |
-| Core services have unit tests | `FileRepo.Core.UnitTests` covers every service path with a mocked `IFileRepository`. |
+| Core services have unit tests | `HiveMind.Core.UnitTests` covers every service path with a mocked `IFileRepository`. |
 
 ### Dependency graph
 
 ```
         ┌───────────────┐
-        │  FileRepo.Web │  controllers, Swagger, Program.cs (composition root)
+        │  HiveMind.Web │  controllers, Swagger, Program.cs (composition root)
         └───┬───────┬───┘
             │       │
             │       ▼
             │  ┌──────────────────────┐
-            │  │ FileRepo.Infrastructure │  FileSystemFileRepository
+            │  │ HiveMind.Infrastructure │  FileSystemFileRepository
             │  └──────────┬───────────┘
             ▼             ▼
         ┌──────────────────────┐
-        │     FileRepo.Core    │  entities, interfaces, commands/queries,
+        │     HiveMind.Core    │  entities, interfaces, commands/queries,
         │  (no dependencies)   │  AppResult, FileService, validation
         └──────────────────────┘
 ```
@@ -86,7 +86,7 @@ These rules come from the spec and drive the design below.
 ```
 FileRepository.sln
 src/
-  FileRepo.Core/
+  HiveMind.Core/
     Common/
       AppResult.cs                 AppResult, AppResult<T>, ResultStatus, ValidationError
       PagedResult.cs
@@ -106,12 +106,12 @@ src/
         IFileService.cs
       FileService.cs
       FileNameValidator.cs
-  FileRepo.Infrastructure/
+  HiveMind.Infrastructure/
     FileSystem/
       FileSystemFileRepository.cs
       FileSystemRepositoryOptions.cs   RootPath
     DependencyInjection.cs             AddFileRepositoryInfrastructure(config)
-  FileRepo.Web/
+  HiveMind.Web/
     Controllers/
       FilesController.cs
     Contracts/                         request/response DTOs
@@ -128,9 +128,9 @@ src/
     appsettings.json
     appsettings.Development.json
 tests/
-  FileRepo.Core.UnitTests/
-  FileRepo.Infrastructure.Tests/
-  FileRepo.Web.IntegrationTests/
+  HiveMind.Core.UnitTests/
+  HiveMind.Infrastructure.Tests/
+  HiveMind.Web.IntegrationTests/
 ```
 
 ---
@@ -327,7 +327,7 @@ Error bodies use `ProblemDetails`, or `ValidationProblemDetails` for `400`, so S
 
 Naming convention: `Method_Scenario_ExpectedResult`.
 
-### 9.1 `FileRepo.Core.UnitTests` (required by the spec)
+### 9.1 `HiveMind.Core.UnitTests` (required by the spec)
 
 `IFileRepository` is mocked with NSubstitute. No disk access.
 
@@ -339,7 +339,7 @@ Naming convention: `Method_Scenario_ExpectedResult`.
 - **ListAsync**: passes prefix, skip, and take through. Negative skip, zero take, and take above 1000 return `Invalid`.
 - **AppResult**: the factories set status, messages, and validation errors correctly.
 
-### 9.2 `FileRepo.Infrastructure.Tests`
+### 9.2 `HiveMind.Infrastructure.Tests`
 
 Runs against a real temp directory (`[SetUp]` creates it, `[TearDown]` deletes it).
 
@@ -352,7 +352,7 @@ Runs against a real temp directory (`[SetUp]` creates it, `[TearDown]` deletes i
 - A failed write leaves no temp file behind and no partial destination file.
 - Concurrent creates of the same name: exactly one wins.
 
-### 9.3 `FileRepo.Web.IntegrationTests`
+### 9.3 `HiveMind.Web.IntegrationTests`
 
 Uses `WebApplicationFactory<Program>` with `RootPath` overridden to a temp directory.
 
@@ -379,7 +379,7 @@ Work test-first inside Core. Each milestone should leave the build green.
 ### Definition of done
 
 - All five stories meet their acceptance criteria.
-- `FileRepo.Core` has no package or project references.
+- `HiveMind.Core` has no package or project references.
 - Every `IFileService` path has a Core unit test.
 - Swagger UI documents all endpoints, request shapes, and response codes.
 - The repository folder is configurable only through `appsettings` or environment overrides, with no hard-coded paths.

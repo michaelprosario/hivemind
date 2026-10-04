@@ -1,0 +1,6 @@
+@HiveMind.Web_HostAddress = http://localhost:5166
+
+GET {{HiveMind.Web_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

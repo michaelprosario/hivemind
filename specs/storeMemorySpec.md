@@ -7,10 +7,10 @@ As an AI agent, I should be able to store data into a named index.
 - Purpose: stores unstructured data, code snippets, user preferences, or task progress — i.e. general-purpose agent "memory", not just files on disk.
 
 ## Current state
-- `IVectorDocumentService.IngestAsync` (`src/FileRepo.Core/VectorSearch/VectorDocumentService.cs`) only accepts a `SourcePath`: it reads a file from disk (`ISourceTextReader`), chunks it, embeds the chunks, and stores them via `IVectorDocumentStore.IngestAsync`, which dedupes by content hash against a JSON catalog keyed on `(index, canonicalSourcePath)` and does an atomic swap (`isActive` payload flag + delete-old-version filter). There is no way to ingest raw text supplied inline, no key/id-based upsert, and no metadata fields beyond `sourcePath`/`sourceName`/`contentHash`/`documentVersion`/`chunkIndex`/`modelRevision`.
-- `QdrantVectorDocumentStore` (`src/FileRepo.Infrastructure/VectorSearch/QdrantVectorDocumentStore.cs`) creates collections on demand (`EnsureCollectionAsync`) with `vectors.size`/`Cosine` and a keyword index on `sourcePath`. Points carry a fixed payload shape; there is no generic metadata bag.
-- MCP tools (`src/FileRepo.Mcp/Tools/VectorSearchTools.cs`) expose `Search`, `ListIndexes`; file ingestion (`ingest`, `ingest-directory`) is only wired up via the Web API/CLI today, not MCP.
-- Web API parity exists in `VectorDocumentsController` (`src/FileRepo.Web/Controllers/VectorDocumentsController.cs`) / `VectorSearchContracts.cs`.
+- `IVectorDocumentService.IngestAsync` (`src/HiveMind.Core/VectorSearch/VectorDocumentService.cs`) only accepts a `SourcePath`: it reads a file from disk (`ISourceTextReader`), chunks it, embeds the chunks, and stores them via `IVectorDocumentStore.IngestAsync`, which dedupes by content hash against a JSON catalog keyed on `(index, canonicalSourcePath)` and does an atomic swap (`isActive` payload flag + delete-old-version filter). There is no way to ingest raw text supplied inline, no key/id-based upsert, and no metadata fields beyond `sourcePath`/`sourceName`/`contentHash`/`documentVersion`/`chunkIndex`/`modelRevision`.
+- `QdrantVectorDocumentStore` (`src/HiveMind.Infrastructure/VectorSearch/QdrantVectorDocumentStore.cs`) creates collections on demand (`EnsureCollectionAsync`) with `vectors.size`/`Cosine` and a keyword index on `sourcePath`. Points carry a fixed payload shape; there is no generic metadata bag.
+- MCP tools (`src/HiveMind.Mcp/Tools/VectorSearchTools.cs`) expose `Search`, `ListIndexes`; file ingestion (`ingest`, `ingest-directory`) is only wired up via the Web API/CLI today, not MCP.
+- Web API parity exists in `VectorDocumentsController` (`src/HiveMind.Web/Controllers/VectorDocumentsController.cs`) / `VectorSearchContracts.cs`.
 - Follows `specs/cleanArchitecture.md`: MCP/Web -> Core service -> Core port -> Infrastructure adapter.
 
 ## Design
@@ -99,7 +99,7 @@ public static async Task<string> StoreMemory(
 - README: add `store_memory` to the MCP tools list with example request/response; note the `kind` distinction between file-ingested chunks and agent memories sharing an index.
 
 ## Testing
-- Unit (`tests/FileRepo.Core.UnitTests`): `VectorDocumentService.StoreMemoryAsync` — validation errors (bad index name, empty text, text over limit, invalid key pattern, invalid tag, non-absolute source URL), successful store calls store with expected chunk/vector counts, propagates store failures via fake `IVectorDocumentStore`.
+- Unit (`tests/HiveMind.Core.UnitTests`): `VectorDocumentService.StoreMemoryAsync` — validation errors (bad index name, empty text, text over limit, invalid key pattern, invalid tag, non-absolute source URL), successful store calls store with expected chunk/vector counts, propagates store failures via fake `IVectorDocumentStore`.
 - Infrastructure: `QdrantVectorDocumentStore` with a stub `HttpMessageHandler` — new key creates a collection + points; re-storing same key overwrites points at the same ids and trims extra old chunks when text shrinks; omitted key always creates a new, distinct group id.
 - Manual/integration: `docker-compose/qdrant` up, call `store_memory` twice with the same key (verify overwrite via `curl localhost:6333/collections/{name}/points/scroll`), then `search`/`list_indexes` to confirm the memory is retrievable and the index reports updated point counts.
 
