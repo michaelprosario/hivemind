@@ -134,3 +134,16 @@ Input: name, distance_metric(Cosine)
 Purpose: Spins up task-specific indexes on the fly
 
 Document in plan.md
+===
+Think about the following requirement.
+
+- Review details related to ADK: specs/adk.md
+
+as a software engineer, create an agent development kit demo program
+- we want to connect to the hivemind.mcp via stdio mcp
+- we will run the adk service using "adk web"
+- configure the agent to leverage an appropriate version of gemini
+- the agent will answer questions using web search or data found in our mcp
+- the agent can write data into our mcp server too 
+
+Document a tech plan in adkTechPlan.md
