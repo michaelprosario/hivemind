@@ -153,12 +153,18 @@ download the embedding model once).
 ```bash
 git clone <this-repo-url>
 cd hivemind
-dotnet restore FileRepository.slnx
+cd src/HiveMind.Mcp
+dotnet build
 ```
 
 ### 2. Download the local embedding model (one-time)
 
+Navigate to the root of the repository.
+
 ```bash
+python -m venv .venv
+source .venv/bin/activate
+
 pip install -U huggingface_hub
 hf download Xenova/bge-small-en-v1.5 --local-dir ./models/bge-small-en-v1.5-onnx
 ```
@@ -166,6 +172,11 @@ hf download Xenova/bge-small-en-v1.5 --local-dir ./models/bge-small-en-v1.5-onnx
 The `VectorSearch:ModelDirectory` setting must point at the folder containing
 `model.onnx` and `vocab.txt` (defaults to
 `./models/bge-small-en-v1.5-onnx/onnx` relative to `src/HiveMind.Web`).
+
+Update the ModelDirectory for the following appsettings.json
+- src/HiveMind.Mcp/appsettings.json
+- src/HiveMind.Cli/appsettings.json
+- src/HiveMind.Web/appsettings.json
 
 ### 3. Start local Qdrant
 
