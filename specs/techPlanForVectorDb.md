@@ -425,7 +425,7 @@ through environment variables or user secrets, not committed secrets.
     "ChunkSizeTokens": 400,
     "ChunkOverlapTokens": 60,
     "EmbeddingBatchSize": 32,
-    "ModelDirectory": "./data/models/bge-small-en-v1.5",
+    "ModelDirectory": "../../models/bge-small-en-v1.5-onnx/onnx",
     "ModelRevision": "pinned-model-revision",
     "Qdrant": {
       "Endpoint": "http://localhost:6334",
